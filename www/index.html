@@ -643,61 +643,47 @@
 <!-- ===================== GOOGLE.SCRIPT.RUN POLYFILL ===================== -->
 <script>
 // ─── Replaces all google.script.run.* calls with fetch() to GAS ─────────────
-(function() {
-  function gasJsonp(fnName, args) {
-    return new Promise((resolve, reject) => {
-      const cbName = '_gas_cb_' + Date.now();
-      const script = document.createElement('script');
-      const url = new URL(window.GAS_URL);
-      url.searchParams.set('fn', fnName);
-      url.searchParams.set('params', JSON.stringify(args || []));
-      url.searchParams.set('callback', cbName);
-      window[cbName] = (data) => { delete window[cbName]; script.remove(); resolve(data); };
-      script.onerror = () => { delete window[cbName]; script.remove(); reject(new Error('JSONP failed for: ' + fnName)); };
-      script.src = url.toString();
-      document.head.appendChild(script);
-    });
+<script>
+// Simple google.script.run polyfill
+window.google = { script: { run: {} } };
+
+function _gasCall(fnName, args) {
+  return new Promise((resolve, reject) => {
+    const cb = '_cb_' + fnName + '_' + Date.now();
+    const s = document.createElement('script');
+    const url = new URL(window.GAS_URL);
+    url.searchParams.set('fn', fnName);
+    url.searchParams.set('params', JSON.stringify(args || []));
+    url.searchParams.set('callback', cb);
+    window[cb] = (d) => { delete window[cb]; s.remove(); resolve(d); };
+    s.onerror = () => { delete window[cb]; s.remove(); reject(new Error(fnName + ' failed')); };
+    s.src = url.toString();
+    document.head.appendChild(s);
+  });
+}
+
+// This creates: google.script.run.withSuccessHandler(fn).fnName(args)
+window.google.script.run = new Proxy({}, {
+  get(_, fnName) {
+    let _ok = null, _err = (e) => console.error(e);
+    const api = {
+      withSuccessHandler(f) { _ok = f; return api; },
+      withFailureHandler(f) { _err = f; return api; }
+    };
+    // Handle: google.script.run.fnName(args)  — direct call
+    const callable = function(...args) {
+      _gasCall(fnName, args).then(r => _ok && _ok(r)).catch(e => _err && _err(e));
+      return api;
+    };
+    // Copy api methods onto callable so chaining works
+    callable.withSuccessHandler = (f) => { _ok = f; return callable; };
+    callable.withFailureHandler = (f) => { _err = f; return callable; };
+    // Handle: .withSuccessHandler(fn).fnName(args) — chained call
+    api[fnName] = callable;
+    return callable;
   }
-
-  window.google = {
-    script: {
-      run: new Proxy({}, {
-        get(_, fnName) {
-          return function(...args) {
-            let _success = null;
-            let _failure = (e) => console.error('GAS Error:', e);
-            const obj = {
-              withSuccessHandler(fn) { _success = fn; return obj; },
-              withFailureHandler(fn) { _failure = fn; return obj; }
-            };
-            // Allow both: google.script.run.fn(args) and chained version
-            Object.defineProperty(obj, fnName, {
-              value: function(...a) {
-                const finalArgs = a.length ? a : args;
-                setTimeout(() => {
-                  gasJsonp(fnName, finalArgs)
-                    .then(r => { if (_success) _success(r); })
-                    .catch(e => { if (_failure) _failure(e); });
-                }, 0);
-              }
-            });
-            // Direct call case
-            setTimeout(() => {
-              if (args.length > 0) {
-                gasJsonp(fnName, args)
-                  .then(r => { if (_success) _success(r); })
-                  .catch(e => { if (_failure) _failure(e); });
-              }
-            }, 0);
-            return obj;
-          };
-        }
-      })
-    }
-  };
-})();
+});
 </script>
-
 <!-- ===================== OFFLINE DETECTION ===================== -->
 <script>
 function updateOnlineStatus() {
