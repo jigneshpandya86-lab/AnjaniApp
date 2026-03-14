@@ -642,7 +642,7 @@
 
 
 <script>
-  (function() {
+(function() {
   function gasJsonp(fnName, args) {
     return new Promise(function(resolve, reject) {
       var cb = '_gcb_' + Date.now() + '_' + Math.random().toString(36).slice(2);
@@ -651,7 +651,10 @@
       url.searchParams.set('fn', fnName);
       url.searchParams.set('params', JSON.stringify(args || []));
       url.searchParams.set('callback', cb);
-      var timer = setTimeout(function() { delete window[cb]; s.remove(); reject(new Error(fnName + ' timed out')); }, 30000);
+      var timer = setTimeout(function() {
+        delete window[cb]; s.remove();
+        reject(new Error(fnName + ' timed out'));
+      }, 30000);
       window[cb] = function(d) { clearTimeout(timer); delete window[cb]; s.remove(); resolve(d); };
       s.onerror = function() { clearTimeout(timer); delete window[cb]; s.remove(); reject(new Error('JSONP failed: ' + fnName)); };
       s.src = url.toString();
@@ -659,40 +662,53 @@
     });
   }
 
-  function makeRunner(fnName, getOk, getErr) {
-    return function() {
-      var args = Array.prototype.slice.call(arguments);
-      gasJsonp(fnName, args)
-        .then(function(r) { var f = getOk(); if(f) f(r); })
-        .catch(function(e) { var f = getErr(); if(f) f(e); });
-    };
-  }
+  function buildHandler(okFn, errFn) {
+    var _ok  = okFn  || null;
+    var _err = errFn || function(e) { console.error('GAS error:', e); };
 
-  function buildHandler(ok, err) {
-    var _ok = ok || null;
-    var _err = err || function(e) { console.error('GAS:', e); };
-    var h = {
-      withSuccessHandler: function(f) { _ok = f; return h; },
-      withFailureHandler: function(f) { _err = f; return h; }
-    };
-    return new Proxy(h, {
-      get: function(t, p) {
-        if (p in t) return t[p];
-        return makeRunner(p, function(){return _ok;}, function(){return _err;});
+    // Return a Proxy so ANY method name is callable as a GAS function
+    return new Proxy({}, {
+      get: function(target, prop) {
+        // Allow chaining withSuccessHandler / withFailureHandler
+        if (prop === 'withSuccessHandler') {
+          return function(f) { _ok = f; return buildHandler(_ok, _err); };
+        }
+        if (prop === 'withFailureHandler') {
+          return function(f) { _err = f; return buildHandler(_ok, _err); };
+        }
+        // Any other property = a GAS function name to call
+        return function() {
+          var args = Array.prototype.slice.call(arguments);
+          gasJsonp(prop, args)
+            .then(function(r)  { if (_ok)  _ok(r);  })
+            .catch(function(e) { if (_err) _err(e); });
+        };
       }
     });
   }
 
-  window.google = { script: { run: new Proxy({}, {
-    get: function(_, p) {
-      if (p === 'withSuccessHandler') return function(f) { return buildHandler(f, null); };
-      if (p === 'withFailureHandler') return function(f) { return buildHandler(null, f); };
-      return makeRunner(p, function(){return null;}, function(){return function(e){console.error('GAS:',e);};});
+  // Top-level google.script.run proxy
+  window.google = {
+    script: {
+      run: new Proxy({}, {
+        get: function(_, prop) {
+          if (prop === 'withSuccessHandler') {
+            return function(f) { return buildHandler(f, null); };
+          }
+          if (prop === 'withFailureHandler') {
+            return function(f) { return buildHandler(null, f); };
+          }
+          // Direct call: google.script.run.someFunction()
+          return function() {
+            var args = Array.prototype.slice.call(arguments);
+            gasJsonp(prop, args).catch(function(e) { console.error('GAS:', e); });
+          };
+        }
+      })
     }
-  })}};
+  };
 })();
 </script>
-
 <script>
 function updateOnlineStatus() {
   if (navigator.onLine) {
