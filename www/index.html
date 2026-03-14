@@ -641,7 +641,8 @@
 </script>
 
 <!-- ===================== GOOGLE.SCRIPT.RUN POLYFILL ===================== -->
-(function() {
+<script>
+  (function() {
   function gasJsonp(fnName, args) {
     return new Promise(function(resolve, reject) {
       var cb = '_gcb_' + Date.now() + '_' + Math.random().toString(36).slice(2);
