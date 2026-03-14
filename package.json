@@ -1,0 +1,21 @@
+{
+  "name": "anjani-water-app",
+  "version": "1.0.0",
+  "description": "Anjani Water Delivery Management System — Standalone Web App",
+  "private": true,
+  "scripts": {
+    "test": "npm run test:unit && npm run test:integration",
+    "test:unit": "vitest run tests/unit",
+    "test:integration": "playwright test tests/integration",
+    "test:watch": "vitest tests/unit",
+    "test:ui": "vitest --ui",
+    "dev": "npx serve www -p 3000",
+    "lint": "eslint www/*.js"
+  },
+  "devDependencies": {
+    "vitest": "^1.6.0",
+    "@vitest/ui": "^1.6.0",
+    "@playwright/test": "^1.44.0",
+    "eslint": "^9.0.0"
+  }
+}
