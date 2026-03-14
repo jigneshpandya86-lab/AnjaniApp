@@ -641,46 +641,55 @@
 </script>
 
 <!-- ===================== GOOGLE.SCRIPT.RUN POLYFILL ===================== -->
-<script>
-// Simple google.script.run polyfill
-window.google = { script: { run: {} } };
-
-function _gasCall(fnName, args) {
-  return new Promise((resolve, reject) => {
-    const cb = '_cb_' + fnName + '_' + Date.now();
-    const s = document.createElement('script');
-    const url = new URL(window.GAS_URL);
-    url.searchParams.set('fn', fnName);
-    url.searchParams.set('params', JSON.stringify(args || []));
-    url.searchParams.set('callback', cb);
-    window[cb] = (d) => { delete window[cb]; s.remove(); resolve(d); };
-    s.onerror = () => { delete window[cb]; s.remove(); reject(new Error(fnName + ' failed')); };
-    s.src = url.toString();
-    document.head.appendChild(s);
-  });
-}
-
-// This creates: google.script.run.withSuccessHandler(fn).fnName(args)
-window.google.script.run = new Proxy({}, {
-  get(_, fnName) {
-    let _ok = null, _err = (e) => console.error(e);
-    const api = {
-      withSuccessHandler(f) { _ok = f; return api; },
-      withFailureHandler(f) { _err = f; return api; }
-    };
-    // Handle: google.script.run.fnName(args)  — direct call
-    const callable = function(...args) {
-      _gasCall(fnName, args).then(r => _ok && _ok(r)).catch(e => _err && _err(e));
-      return api;
-    };
-    // Copy api methods onto callable so chaining works
-    callable.withSuccessHandler = (f) => { _ok = f; return callable; };
-    callable.withFailureHandler = (f) => { _err = f; return callable; };
-    // Handle: .withSuccessHandler(fn).fnName(args) — chained call
-    api[fnName] = callable;
-    return callable;
+(function() {
+  function gasJsonp(fnName, args) {
+    return new Promise(function(resolve, reject) {
+      var cb = '_gcb_' + Date.now() + '_' + Math.random().toString(36).slice(2);
+      var s = document.createElement('script');
+      var url = new URL(window.GAS_URL);
+      url.searchParams.set('fn', fnName);
+      url.searchParams.set('params', JSON.stringify(args || []));
+      url.searchParams.set('callback', cb);
+      var timer = setTimeout(function() { delete window[cb]; s.remove(); reject(new Error(fnName + ' timed out')); }, 30000);
+      window[cb] = function(d) { clearTimeout(timer); delete window[cb]; s.remove(); resolve(d); };
+      s.onerror = function() { clearTimeout(timer); delete window[cb]; s.remove(); reject(new Error('JSONP failed: ' + fnName)); };
+      s.src = url.toString();
+      document.head.appendChild(s);
+    });
   }
-});
+
+  function makeRunner(fnName, getOk, getErr) {
+    return function() {
+      var args = Array.prototype.slice.call(arguments);
+      gasJsonp(fnName, args)
+        .then(function(r) { var f = getOk(); if(f) f(r); })
+        .catch(function(e) { var f = getErr(); if(f) f(e); });
+    };
+  }
+
+  function buildHandler(ok, err) {
+    var _ok = ok || null;
+    var _err = err || function(e) { console.error('GAS:', e); };
+    var h = {
+      withSuccessHandler: function(f) { _ok = f; return h; },
+      withFailureHandler: function(f) { _err = f; return h; }
+    };
+    return new Proxy(h, {
+      get: function(t, p) {
+        if (p in t) return t[p];
+        return makeRunner(p, function(){return _ok;}, function(){return _err;});
+      }
+    });
+  }
+
+  window.google = { script: { run: new Proxy({}, {
+    get: function(_, p) {
+      if (p === 'withSuccessHandler') return function(f) { return buildHandler(f, null); };
+      if (p === 'withFailureHandler') return function(f) { return buildHandler(null, f); };
+      return makeRunner(p, function(){return null;}, function(){return function(e){console.error('GAS:',e);};});
+    }
+  })}};
+})();
 </script>
 <!-- ===================== OFFLINE DETECTION ===================== -->
 <script>
