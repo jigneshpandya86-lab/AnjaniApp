@@ -9,7 +9,6 @@ on:
       - 'package.json'
       - '.github/workflows/build-apk.yml'
   workflow_dispatch:
-
 jobs:
   build-apk:
     runs-on: ubuntu-latest
