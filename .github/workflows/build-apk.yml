@@ -1,12 +1,12 @@
 name: Build Anjani Water APK
 
 on:
-  workflow_dispatch:  # Manual trigger — click "Run workflow" in Actions tab
+  workflow_dispatch:
   push:
     branches: [ main ]
     paths:
-      - 'www/**'          # Auto-build when web files change
-      - 'android/**'      # Auto-build when Android config changes
+      - 'www/**'
+      - 'android/**'
       - 'capacitor.config.json'
 
 jobs:
@@ -15,44 +15,36 @@ jobs:
     runs-on: ubuntu-latest
 
     steps:
-      # ── 1. Checkout code ──────────────────────────────
       - name: Checkout repository
         uses: actions/checkout@v4
 
-      # ── 2. Setup Node.js 20 (LTS, stable for Capacitor) ──
       - name: Setup Node.js
         uses: actions/setup-node@v4
         with:
           node-version: '20'
 
-      # ── 3. Setup Java 17 (required for Android builds) ──
       - name: Setup Java
         uses: actions/setup-java@v4
         with:
           distribution: 'temurin'
           java-version: '17'
 
-      # ── 4. Install dependencies ───────────────────────
       - name: Install npm dependencies
         run: npm install
 
-      # ── 5. Sync Capacitor (copies www/ into android/) ─
-       - name: Add Android platform
+      - name: Add Android platform
         run: npx cap add android
-      
+
       - name: Sync Capacitor
         run: npx cap sync android
 
-      # ── 6. Make gradlew executable ────────────────────
       - name: Make gradlew executable
         run: chmod +x android/gradlew
 
-      # ── 7. Build debug APK ────────────────────────────
       - name: Build Debug APK
         working-directory: android
         run: ./gradlew assembleDebug --no-daemon
 
-      # ── 8. Upload APK as downloadable artifact ────────
       - name: Upload APK
         uses: actions/upload-artifact@v4
         with:
@@ -60,7 +52,6 @@ jobs:
           path: android/app/build/outputs/apk/debug/app-debug.apk
           retention-days: 30
 
-      # ── 9. Show APK size in logs ──────────────────────
       - name: APK Info
         run: |
           APK_PATH="android/app/build/outputs/apk/debug/app-debug.apk"
