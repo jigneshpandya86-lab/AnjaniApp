@@ -1,33 +1,22 @@
 {
   "name": "anjani-water-app",
   "version": "1.0.0",
-  "description": "Anjani Water Delivery Management System — Standalone Web App",
-  "private": true,
+  "description": "Anjani Water Delivery Management",
   "scripts": {
-    "test": "npm run test:unit && npm run test:integration",
-    "test:unit": "vitest run tests/unit",
-    "test:integration": "playwright test tests/integration",
-    "test:watch": "vitest tests/unit",
-    "test:ui": "vitest --ui",
-    "dev": "npx serve www -p 3000",
-    "lint": "eslint www/*.js",
-    "cap:sync": "npx cap sync android",
-    "cap:open": "npx cap open android"
+    "build": "echo 'Static site - no build needed'",
+    "test": "vitest",
+    "test:e2e": "playwright test",
+    "cap:sync": "npx cap sync",
+    "cap:android": "npx cap open android"
   },
   "dependencies": {
-    "@capacitor/core": "^6.1.0",
-    "@capacitor/android": "^6.1.0",
-    "@capacitor/camera": "^6.0.0",
-    "@capacitor/filesystem": "^6.0.0",
-    "@capacitor/push-notifications": "^6.0.0",
-    "@capacitor/splash-screen": "^6.0.0",
-    "@capacitor/status-bar": "^6.0.0"
+    "@capacitor/android": "^5.0.0",
+    "@capacitor/camera": "^5.0.0",
+    "@capacitor/core": "^5.0.0",
+    "@capacitor-community/sms": "^1.0.0"
   },
   "devDependencies": {
-    "@capacitor/cli": "^6.1.0",
-    "vitest": "^1.6.0",
-    "@vitest/ui": "^1.6.0",
-    "@playwright/test": "^1.44.0",
-    "eslint": "^9.0.0"
+    "@playwright/test": "^1.40.0",
+    "vitest": "^1.0.0"
   }
 }
