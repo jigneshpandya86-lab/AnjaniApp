@@ -1319,8 +1319,10 @@ function renderRecentPayments() {
   let quotes = ["Your trust is our real earning.","Quality is not an act, it is a habit.","Happiness flows like water.","Small steps lead to big results.","Gratitude turns what we have into enough.","Success is the sum of small efforts.","Good water, good life.","Purity you can taste.","Thank you for being our strength.","Every drop counts, just like you.","Health is the greatest wealth.","Kindness is free, sprinkle it everywhere.","Believe you can and you're halfway there.","Excellence is our standard.","Serve with a smile."];
   quotes.sort(() => Math.random() - 0.5);
   list.innerHTML = recent.map((p, index) => {
-    let dateParts = p.date.split('-');
-    let shortDate = dateParts[2] + '-' + new Date(p.date).toLocaleString('default',{month:'short'});
+// FIXED: Parse date parts directly without creating a Date object
+  let dateParts = p.date.replace(/^'/, '').split('-');
+  const monthNames = ['Jan','Feb','Mar','Apr','May','Jun','Jul','Aug','Sep','Oct','Nov','Dec'];
+  let shortDate = dateParts[2] + '-' + (monthNames[parseInt(dateParts[1]) - 1] || '?');
     let bal = 0;
     let c = DB.customers.find(x => String(x.id)===String(p.clientId));
     let mob = p.mobile || (c ? c.mobile : '');
