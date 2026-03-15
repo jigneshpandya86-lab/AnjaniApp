@@ -711,25 +711,34 @@
 </script>
 <script>
 function updateOnlineStatus() {
+  const dot  = document.getElementById('conn-dot');
+  const text = document.getElementById('conn-text');
+  const badge = document.getElementById('sync-badge');
+ 
   if (navigator.onLine) {
     document.body.classList.remove('is-offline');
-    document.getElementById('conn-dot').className = 'w-2 h-2 rounded-full bg-green-400';
-    document.getElementById('conn-text').innerText = 'Connected';
-    // Try to sync queued items
+    if (dot)  dot.className  = 'w-2 h-2 rounded-full bg-green-400';
+    if (text) text.innerText = 'Connected';
+ 
+    // Try Background Sync
     if ('serviceWorker' in navigator && navigator.serviceWorker.controller) {
       navigator.serviceWorker.ready.then(reg => {
         if (reg.sync) reg.sync.register('anjani-sync');
       });
     }
+ 
+    // Drain action queue
+    drainActionQueue();
+ 
   } else {
     document.body.classList.add('is-offline');
-    document.getElementById('conn-dot').className = 'w-2 h-2 rounded-full bg-amber-400';
-    document.getElementById('conn-text').innerText = 'Offline';
+    if (dot)  dot.className  = 'w-2 h-2 rounded-full bg-amber-400';
+    if (text) text.innerText = 'Offline — working from cache';
   }
+ 
+  // Update sync badge count
+  updateSyncBadge();
 }
-window.addEventListener('online', updateOnlineStatus);
-window.addEventListener('offline', updateOnlineStatus);
-updateOnlineStatus();
 </script>
 
 <!-- ===================== SERVICE WORKER REGISTRATION ===================== -->
@@ -849,28 +858,106 @@ window.onload = function() {
 
 function loadData() {
   const log = document.getElementById('debug-log');
+  const CACHE_KEY = 'anjani_db_cache';
+  const CACHE_TIME_KEY = 'anjani_db_cache_time';
+ 
+  // ── Step 1: Load from cache INSTANTLY if available ──────
+  const cached = localStorage.getItem(CACHE_KEY);
+  if (cached) {
+    try {
+      const parsed = JSON.parse(cached);
+      DB.customers = parsed.customers || [];
+      DB.orders    = parsed.orders    || [];
+      DB.payments  = parsed.payments  || [];
+      DB.stock     = parsed.stock     || [];
+      DB.jobs      = parsed.jobs      || [];
+      DB.smartMsgs = parsed.smartMsgs || {};
+      DB.leads     = parsed.leads     || [];
+      render();
+      renderLeads();
+      document.getElementById('loader').classList.add('hidden');
+      // Show "last synced" time in connection indicator
+      const cacheTime = localStorage.getItem(CACHE_TIME_KEY);
+      if (cacheTime) {
+        const mins = Math.round((Date.now() - Number(cacheTime)) / 60000);
+        const connText = document.getElementById('conn-text');
+        if (connText && !navigator.onLine) {
+          connText.innerText = 'Offline — data from ' + (mins < 2 ? 'just now' : mins + 'm ago');
+        }
+      }
+    } catch(e) {
+      console.log('[Cache] Parse error:', e);
+    }
+  }
+ 
+  // ── Step 2: If offline, stop here — cache is enough ─────
+  if (!navigator.onLine) {
+    if (!cached) {
+      // First ever load with no cache and no internet
+      if (log) { log.innerText = "No internet & no cached data. Please connect once to load data."; log.classList.remove('hidden'); }
+    }
+    return;
+  }
+ 
+  // ── Step 3: Online — fetch fresh data from GAS ──────────
   google.script.run.withSuccessHandler(function(res) {
     try {
       const parsed = JSON.parse(res);
       if (parsed.error) throw new Error(parsed.error);
-      // Merge into single DB
+ 
       DB.customers = parsed.customers || [];
-      DB.orders = parsed.orders || [];
-      DB.payments = parsed.payments || [];
-      DB.stock = parsed.stock || [];
-      DB.jobs = parsed.jobs || [];
+      DB.orders    = parsed.orders    || [];
+      DB.payments  = parsed.payments  || [];
+      DB.stock     = parsed.stock     || [];
+      DB.jobs      = parsed.jobs      || [];
       DB.smartMsgs = parsed.smartMsgs || {};
-      // Leads loaded separately
-      google.script.run.withSuccessHandler(l => { DB.leads = JSON.parse(l); renderLeads(); }).getLeadsData();
+ 
+      // Fetch leads then save everything to cache
+      google.script.run.withSuccessHandler(function(l) {
+        DB.leads = JSON.parse(l);
+        renderLeads();
+ 
+        // ── Save full DB snapshot to localStorage ──────
+        const snapshot = {
+          customers: DB.customers,
+          orders:    DB.orders,
+          payments:  DB.payments,
+          stock:     DB.stock,
+          jobs:      DB.jobs,
+          smartMsgs: DB.smartMsgs,
+          leads:     DB.leads
+        };
+        try {
+          localStorage.setItem('anjani_db_cache', JSON.stringify(snapshot));
+          localStorage.setItem('anjani_db_cache_time', String(Date.now()));
+          console.log('[Cache] DB snapshot saved at', new Date().toLocaleTimeString());
+        } catch(e) {
+          console.log('[Cache] Storage full, clearing old data');
+          localStorage.removeItem('anjani_db_cache');
+        }
+ 
+        // Update connection status
+        const connText = document.getElementById('conn-text');
+        if (connText) connText.innerText = 'Synced ' + new Date().toLocaleTimeString('en-GB', {hour:'2-digit', minute:'2-digit'});
+ 
+      }).getLeadsData();
+ 
       render();
       document.getElementById('loader').classList.add('hidden');
+ 
     } catch(e) {
-      setText('debug-log', "DATA: " + e.message);
-      log.classList.remove('hidden');
+      if (log) { log.innerText = "DATA: " + e.message; log.classList.remove('hidden'); }
     }
   }).withFailureHandler(function(e) {
-    setText('debug-log', "CONN: " + e.message);
-    log.classList.remove('hidden');
+    // GAS failed — but cache already loaded above so app still works
+    console.log('[GAS] Load failed:', e.message);
+    const connText = document.getElementById('conn-text');
+    if (connText) connText.innerText = 'Sync failed — using cached data';
+    // Hide loader if we have cached data
+    if (cached) document.getElementById('loader').classList.add('hidden');
+    else {
+      if (log) { log.innerText = "CONN: " + e.message; log.classList.remove('hidden'); }
+    }
   }).getInitialData();
 }
 
@@ -3024,6 +3111,130 @@ function showToast(msg, isError) {
   setTimeout(() => {}, 0);
   setTimeout(() => { toast.style.opacity='0'; }, 3000);
     }
+  const ACTION_QUEUE_KEY = 'anjani_action_queue';
+ 
+function getActionQueue() {
+  try { return JSON.parse(localStorage.getItem(ACTION_QUEUE_KEY) || '[]'); }
+  catch(e) { return []; }
+}
+ 
+function saveActionQueue(q) {
+  try { localStorage.setItem(ACTION_QUEUE_KEY, JSON.stringify(q)); }
+  catch(e) { console.log('[Queue] Save failed:', e); }
+}
+ 
+function enqueueAction(fn, params) {
+  const q = getActionQueue();
+  q.push({ id: Date.now(), fn: fn, params: params, timestamp: new Date().toISOString() });
+  saveActionQueue(q);
+  updateSyncBadge();
+  showToast('📥 Saved offline — will sync when connected');
+  console.log('[Queue] Enqueued:', fn, '— Queue size:', q.length);
+}
+ 
+function updateSyncBadge() {
+  const q = getActionQueue();
+  const badge = document.getElementById('sync-badge');
+  const count = document.getElementById('sync-count');
+  if (!badge || !count) return;
+  if (q.length > 0) {
+    badge.style.display = 'block';
+    count.innerText = q.length;
+  } else {
+    badge.style.display = 'none';
+  }
+}
+ 
+function drainActionQueue() {
+  const q = getActionQueue();
+  if (!q.length) return;
+  console.log('[Queue] Draining', q.length, 'queued actions...');
+  showToast('🔄 Syncing ' + q.length + ' offline actions...');
+ 
+  let processed = 0;
+  const processNext = () => {
+    if (processed >= q.length) {
+      saveActionQueue([]);
+      updateSyncBadge();
+      loadData(); // Refresh after all synced
+      showToast('✅ All offline actions synced!');
+      return;
+    }
+    const item = q[processed];
+    processed++;
+    google.script.run
+      .withSuccessHandler(() => { console.log('[Queue] Synced:', item.fn); processNext(); })
+      .withFailureHandler((e) => { console.log('[Queue] Sync failed:', item.fn, e); processNext(); })
+      [item.fn](item.params);
+  };
+  processNext();
+}
+ 
+// ── Offline-aware wrappers for the 4 key write actions ──────
+ 
+// Call this instead of google.script.run directly for writes
+function saveOrderOffline(data) {
+  if (!navigator.onLine) {
+    // Add to local DB immediately so UI updates
+    data.status = 'Pending';
+    data._offline = true;
+    DB.orders.push(data);
+    render();
+    enqueueAction('saveOrder', data);
+    return;
+  }
+  google.script.run.withSuccessHandler((res) => {
+    const r = JSON.parse(res);
+    highlightID = r.id;
+    loadData();
+  }).saveOrder(data);
+}
+ 
+function savePaymentOffline(data) {
+  if (!navigator.onLine) {
+    DB.payments.push({ ...data, date: new Date().toISOString().split('T')[0], _offline: true });
+    renderRecentPayments();
+    enqueueAction('savePayment', data);
+    return;
+  }
+  google.script.run.withSuccessHandler(() => {
+    loadData();
+    document.getElementById('pay-amount').value = '';
+    document.getElementById('modal-pay').classList.add('hidden');
+  }).savePayment(data);
+}
+ 
+function saveProductionOffline(data) {
+  if (!navigator.onLine) {
+    DB.stock.push({
+      date: new Date().toISOString().split('T')[0],
+      produced: data.qty, delivered: 0, sku: data.sku || '200ml',
+      _offline: true
+    });
+    renderStockPage();
+    enqueueAction('saveProduction', data);
+    return;
+  }
+  google.script.run.withSuccessHandler(() => {
+    loadData();
+    const prodVal = document.getElementById('prod-val');
+    if (prodVal) prodVal.value = '';
+    showToast('✅ ' + data.qty + ' units added to stock!');
+  }).saveProduction(data);
+}
+ 
+function markDeliveredOffline(id, qty, date, time, address) {
+  if (!navigator.onLine) {
+    const o = DB.orders.find(x => String(x.id) === String(id));
+    if (o) { o.status = 'Delivered'; o._offline = true; }
+    render();
+    enqueueAction('updateOrderStatus', { id, status: 'Delivered', qty, date, time, address });
+    showToast('📥 Marked delivered offline — will sync on reconnect');
+    return;
+  }
+  google.script.run.withSuccessHandler(loadData)
+    .updateOrderStatus(id, 'Delivered', qty, date, time, address);
+}
 </script>
 
 <!-- Maps API — loaded last -->
