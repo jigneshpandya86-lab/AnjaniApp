@@ -3090,9 +3090,9 @@ function placeOrder(e) {
   const btn = document.getElementById('btn-save');
   if (btn.disabled) return;
 
-  const cid   = document.getElementById('ord-cust').value;
-  const c     = DB.customers.find(x => x.id == cid) || {};
-  const data  = {
+  const cid  = document.getElementById('ord-cust').value;
+  const c    = DB.customers.find(x => x.id == cid) || {};
+  const data = {
     id:           'ORD-' + Date.now(),
     clientId:     cid,
     customer:     c.name,
@@ -3111,47 +3111,10 @@ function placeOrder(e) {
   };
 
   // ── OFFLINE path ──────────────────────────────────────────
-if (!navigator.onLine) {
-  try {
+  if (!navigator.onLine) {
     data._offline = true;
     DB.orders.push(data);
     render();
-    e.target.reset();
-    document.getElementById('ord-date').value = new Date().toISOString().split('T')[0];
-    enqueueAction('saveOrder', data);
-    showOfflineToast('📦 Order saved offline for ' + (c.name || 'customer'));
-  } catch(err) {
-    alert('Offline save error: ' + err.message);
-  }
-  return;
-}
-    e.target.reset();
-    document.getElementById('ord-date').value = new Date().toISOString().split('T')[0];
-    enqueueAction('saveOrder', data);
-    showOfflineToast('📦 Order saved offline for ' + (c.name || 'customer'));
-  } catch(err) {
-    alert('Offline save error: ' + err.message);
-  }
-  return;
-}
-    e.target.reset();
-    document.getElementById('ord-date').value = new Date().toISOString().split('T')[0];
-    enqueueAction('saveOrder', data);
-    showOfflineToast('📦 Order saved offline for ' + (c.name || 'customer'));
-  } catch(err) {
-    alert('Offline save error: ' + err.message);
-  }
-  return;
-}
-    e.target.reset();
-    document.getElementById('ord-date').value = new Date().toISOString().split('T')[0];
-    enqueueAction('saveOrder', data);
-    showOfflineToast('📦 Order saved offline for ' + (c.name || 'customer'));
-  } catch(err) {
-    alert('Offline save error: ' + err.message);
-  }
-  return;
-}
     e.target.reset();
     document.getElementById('ord-date').value = new Date().toISOString().split('T')[0];
     enqueueAction('saveOrder', data);
@@ -3160,7 +3123,9 @@ if (!navigator.onLine) {
   }
 
   // ── ONLINE path ───────────────────────────────────────────
-  btn.disabled = true; btn.innerText = "SAVING...";
+  btn.disabled = true;
+  btn.innerText = "SAVING...";
+
   google.script.run
     .withSuccessHandler((res) => {
       const r = JSON.parse(res);
@@ -3168,10 +3133,12 @@ if (!navigator.onLine) {
       loadData();
       e.target.reset();
       document.getElementById('ord-date').value = new Date().toISOString().split('T')[0];
-      btn.disabled = false; btn.innerText = "CONFIRM ORDER";
+      btn.disabled = false;
+      btn.innerText = "CONFIRM ORDER";
     })
     .withFailureHandler((err) => {
-      btn.disabled = false; btn.innerText = "CONFIRM ORDER";
+      btn.disabled = false;
+      btn.innerText = "CONFIRM ORDER";
       showToast('❌ Save failed — saved offline instead', true);
       data._offline = true;
       DB.orders.push(data);
@@ -3180,35 +3147,62 @@ if (!navigator.onLine) {
     })
     .saveOrder(data);
 }
-
 // ── 2. RECORD PAYMENT ────────────────────────────────────────
+// ── PAYMENT FORM SUBMIT ──────────────────────────────────────
 function submitPayment(e) {
   e.preventDefault();
   const custId = document.getElementById('pay-customer').value;
   const amt    = document.getElementById('pay-amount').value;
+  const date   = document.getElementById('pay-date').value;
+
   if (!custId || !amt) { alert("Please select customer and amount"); return; }
+
   const c = DB.customers.find(x => x.id == custId);
+  if (!c) { alert("Customer not found"); return; }
+
   document.getElementById('conf-pay-name').innerText = c.name;
   document.getElementById('conf-pay-amt').innerText  = "₹" + amt;
 
-  // Show offline badge in confirm modal if offline
   const offlineNote = document.getElementById('conf-offline-note');
   if (offlineNote) offlineNote.style.display = navigator.onLine ? 'none' : 'block';
 
   document.getElementById('modal-pay').classList.remove('hidden');
 }
 
+// ── EXECUTE CONFIRMED PAYMENT ────────────────────────────────
 function executePayment() {
   const btn    = document.querySelector('#modal-pay button:last-child');
-  const orgTxt = btn.innerText;
+  const orgTxt = btn ? btn.innerText : 'YES, SAVE';
+
   const custId = document.getElementById('pay-customer').value;
   const amt    = document.getElementById('pay-amount').value;
-  const c      = DB.customers.find(x => x.id == custId);
-  const payData = { clientId: c.id, customer: c.name, mobile: c.mobile, amount: amt };
+  const date   = document.getElementById('pay-date').value || new Date().toISOString().split('T')[0];
 
-  // ── OFFLINE path ──────────────────────────────────────────
+  if (!custId || !amt) {
+    document.getElementById('modal-pay').classList.add('hidden');
+    alert("Missing customer or amount — please try again.");
+    return;
+  }
+
+  const c = DB.customers.find(x => x.id == custId);
+  if (!c) {
+    document.getElementById('modal-pay').classList.add('hidden');
+    alert("Customer not found.");
+    return;
+  }
+
+  const payData = {
+    clientId: c.id,
+    customer: c.name,
+    mobile:   c.mobile,
+    amount:   amt,
+    date:     date,
+    mode:     'Cash'
+  };
+
+  // ── OFFLINE path ─────────────────────────────────────────
   if (!navigator.onLine) {
-    DB.payments.push({ ...payData, date: new Date().toISOString().split('T')[0], _offline: true });
+    DB.payments.push({ ...payData, _offline: true });
     document.getElementById('pay-amount').value = '';
     document.getElementById('modal-pay').classList.add('hidden');
     enqueueAction('savePayment', payData);
@@ -3217,26 +3211,28 @@ function executePayment() {
     return;
   }
 
-  // ── ONLINE path ───────────────────────────────────────────
-  btn.innerText = "SAVING..."; btn.disabled = true;
+  // ── ONLINE path ──────────────────────────────────────────
+  if (btn) { btn.innerText = "SAVING..."; btn.disabled = true; }
+
   google.script.run
     .withSuccessHandler(() => {
       loadData();
       document.getElementById('pay-amount').value = '';
       document.getElementById('modal-pay').classList.add('hidden');
-      btn.innerText = orgTxt; btn.disabled = false;
+      if (btn) { btn.innerText = orgTxt; btn.disabled = false; }
+      showToast('✅ Payment of ₹' + amt + ' recorded for ' + c.name);
     })
     .withFailureHandler((err) => {
-      btn.innerText = orgTxt; btn.disabled = false;
+      if (btn) { btn.innerText = orgTxt; btn.disabled = false; }
       document.getElementById('modal-pay').classList.add('hidden');
-      DB.payments.push({ ...payData, date: new Date().toISOString().split('T')[0], _offline: true });
+      // Fallback to offline queue
+      DB.payments.push({ ...payData, _offline: true });
       renderRecentPayments();
       enqueueAction('savePayment', payData);
       showOfflineToast('💳 Payment saved offline — will sync on reconnect');
     })
     .savePayment(payData);
 }
-
 // ── 3. MARK DELIVERED ────────────────────────────────────────
 function doDel(id) {
   const qty     = document.getElementById('q-' + id).value;
