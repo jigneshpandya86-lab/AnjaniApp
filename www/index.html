@@ -3111,10 +3111,20 @@ function placeOrder(e) {
   };
 
   // ── OFFLINE path ──────────────────────────────────────────
-  if (!navigator.onLine) {
+if (!navigator.onLine) {
+  try {
     data._offline = true;
     DB.orders.push(data);
     render();
+    e.target.reset();
+    document.getElementById('ord-date').value = new Date().toISOString().split('T')[0];
+    enqueueAction('saveOrder', data);
+    showOfflineToast('📦 Order saved offline for ' + (c.name || 'customer'));
+  } catch(err) {
+    alert('Offline save error: ' + err.message);
+  }
+  return;
+}
     e.target.reset();
     document.getElementById('ord-date').value = new Date().toISOString().split('T')[0];
     enqueueAction('saveOrder', data);
