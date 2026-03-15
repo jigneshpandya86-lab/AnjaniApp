@@ -8,8 +8,8 @@ const DB_CACHE_KEY = 'anjani_db_cache';
 
 // Only cache files that actually exist in your repo
 const STATIC_ASSETS = [
-  '/',
-  '/index.html',
+'https://app.anjaniwater.in/',
+'https://app.anjaniwater.in/index.html',
   '/offline.html',
   '/manifest.json',
   '/icon-192.png',
