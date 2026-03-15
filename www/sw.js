@@ -1,19 +1,16 @@
 // ============================================================
-// ANJANI WATER — Service Worker v2
-// Fixed: removed non-existent files, proper offline caching
+// ANJANI WATER — Service Worker v3
 // ============================================================
 
-const CACHE_NAME = 'anjani-v2';
-const DB_CACHE_KEY = 'anjani_db_cache';
+const CACHE_NAME = 'anjani-v3';
 
-// Only cache files that actually exist in your repo
 const STATIC_ASSETS = [
-'https://app.anjaniwater.in/',
-'https://app.anjaniwater.in/index.html',
-  '/offline.html',
-  '/manifest.json',
-  '/icon-192.png',
-  '/icon-512.png',
+  'https://app.anjaniwater.in/',
+  'https://app.anjaniwater.in/index.html',
+  'https://app.anjaniwater.in/offline.html',
+  'https://app.anjaniwater.in/manifest.json',
+  'https://app.anjaniwater.in/icon-192.png',
+  'https://app.anjaniwater.in/icon-512.png',
   'https://cdnjs.cloudflare.com/ajax/libs/feather-icons/4.29.0/feather.min.js',
 ];
 
@@ -48,17 +45,14 @@ self.addEventListener('activate', event => {
 self.addEventListener('fetch', event => {
   const url = new URL(event.request.url);
 
-  // GAS / Google API calls — always network, never cache
-  // These are handled by JSONP in the app, SW just lets them through
+  // GAS / Google API — always network, never cache
   if (url.hostname.includes('script.google.com') ||
-      url.hostname.includes('googleapis.com') ||
-      url.hostname.includes('maps.googleapis.com')) {
-    event.respondWith(fetch(event.request).catch(() => {
-      // Return a simple offline indicator for GAS calls
-      return new Response(JSON.stringify({ offline: true }), {
+      url.hostname.includes('googleapis.com')) {
+    event.respondWith(fetch(event.request).catch(() =>
+      new Response(JSON.stringify({ offline: true }), {
         headers: { 'Content-Type': 'application/json' }
-      });
-    }));
+      })
+    ));
     return;
   }
 
@@ -82,16 +76,15 @@ self.addEventListener('fetch', event => {
       if (cached) return cached;
 
       return fetch(event.request).then(response => {
-        // Cache successful GET responses
         if (response && response.status === 200 && event.request.method === 'GET') {
           const clone = response.clone();
           caches.open(CACHE_NAME).then(cache => cache.put(event.request, clone));
         }
         return response;
       }).catch(() => {
-        // Navigation fallback — show offline page
+        // Navigation fallback
         if (event.request.mode === 'navigate') {
-          return caches.match('/offline.html') || caches.match('/index.html');
+          return caches.match('https://app.anjaniwater.in/index.html');
         }
       });
     })
@@ -107,29 +100,19 @@ self.addEventListener('sync', event => {
 
 async function processQueue() {
   const db = await openDB();
-  const tx = db.transaction('queue', 'readwrite');
-  const store = tx.objectStore('queue');
-
   return new Promise((resolve, reject) => {
+    const tx = db.transaction('queue', 'readwrite');
+    const store = tx.objectStore('queue');
     const req = store.getAll();
     req.onsuccess = async () => {
       const items = req.result;
       console.log('[SW] Processing sync queue:', items.length, 'items');
-
       for (const item of items) {
         try {
-          // Re-execute the JSONP call by notifying the client
           const clients = await self.clients.matchAll();
           clients.forEach(client => {
-            client.postMessage({
-              type: 'SYNC_ITEM',
-              fn: item.fn,
-              params: item.params,
-              id: item.id
-            });
+            client.postMessage({ type: 'SYNC_ITEM', fn: item.fn, params: item.params, id: item.id });
           });
-
-          // Remove from queue
           const delTx = db.transaction('queue', 'readwrite');
           delTx.objectStore('queue').delete(item.id);
         } catch (e) {
