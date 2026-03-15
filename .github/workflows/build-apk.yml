@@ -37,6 +37,9 @@ jobs:
         run: npm install
 
       # ── 5. Sync Capacitor (copies www/ into android/) ─
+       - name: Add Android platform
+        run: npx cap add android
+      
       - name: Sync Capacitor
         run: npx cap sync android
 
