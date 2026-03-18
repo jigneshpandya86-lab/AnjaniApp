@@ -484,7 +484,22 @@
   <button onclick="sjSendWA();setTimeout(sjSendSMS,800)" class="flex-1 bg-purple-600 text-white rounded-lg text-xs font-bold py-2">⚡ Both</button>
 </div>
     </div>
-    <div id="smart-list" class="space-y-4"></div>
+    <!-- NILESH BRIEF SECTION -->
+<div class="bg-white rounded-xl border border-slate-200 shadow-sm mb-6 overflow-hidden">
+  <div class="bg-slate-50 p-4 border-b border-slate-200 flex justify-between items-center">
+    <h3 class="font-black text-slate-700 text-sm uppercase tracking-wide flex items-center gap-2"><i data-feather="user" class="w-4 h-4 text-green-600"></i> Nilesh Briefing</h3>
+    <span class="text-[10px] text-slate-400 font-bold" id="nilesh-time"></span>
+  </div>
+  <div class="p-4">
+    <button onclick="sendSmartBrief()" class="w-full bg-slate-900 text-white rounded-xl p-4 text-sm font-bold flex items-center justify-center gap-3 active:scale-95 transition hover:bg-slate-800">
+      <i data-feather="send" class="w-5 h-5"></i>
+      <span id="smart-brief-label">Send Nilesh Brief</span>
+    </button>
+    <div id="smart-brief-hint" class="text-center text-[10px] text-slate-400 font-bold mt-2"></div>
+  </div>
+</div>
+
+<div id="smart-list" class="space-y-4"></div>
   </div>
 
   <!-- ===== DASHBOARD VIEW ===== -->
@@ -2560,6 +2575,68 @@ function sjBuildMsg(){
 }
 function sjSendWA(){var m=sjBuildMsg();if(!m)return;var ph=(document.getElementById('sj-ph').value||'').replace(/\D/g,'');window.open(ph?'https://wa.me/'+ph+'?text='+encodeURIComponent(m):'https://wa.me/?text='+encodeURIComponent(m),'_blank');}
 function sjSendSMS(){var m=sjBuildMsg();if(!m)return;var ph=(document.getElementById('sj-ph').value||'').replace(/\D/g,'');window.open('sms:'+(ph?'+'+ph:'')+'?body='+encodeURIComponent(m),'_blank');}
+function nileshWA(msg){window.open('https://wa.me/91'+STAFF_NUM+'?text='+encodeURIComponent(msg),'_blank');}
+
+function sendSmartBrief(){
+  var hour=new Date().getHours();
+  if(hour<12) sendMorningBrief();
+  else if(hour<17) sendStockRequest();
+  else sendEveningReport();
+}
+
+function sendMorningBrief(){
+  var today=new Date().toISOString().split('T')[0];
+  var fmtDate=today.split('-').reverse().join('-');
+  var deliveries=(DB.orders||[]).filter(function(o){return o.deliveryDate===today&&o.status==='Pending';});
+  var jobs=(DB.jobs||[]).filter(function(j){return j.status!=='Done';});
+  var stock=0; (DB.stock||[]).forEach(function(s){stock+=(Number(s.produced)||0)-(Number(s.delivered)||0);});
+  var msg='🌅 *GOOD MORNING NILESH*\n📅 '+fmtDate+'\n\n';
+  msg+='🚚 *DELIVERIES TODAY ('+deliveries.length+')*\n';
+  deliveries.forEach(function(o,i){msg+=(i+1)+'. '+o.customer+' — '+o.boxes+' boxes\n   📍 '+(o.address||'No address')+'\n   🕐 '+(o.time||'Anytime')+'\n';});
+  if(!deliveries.length) msg+='No deliveries today\n';
+  msg+='\n📋 *PENDING TASKS ('+jobs.length+')*\n';
+  jobs.forEach(function(j,i){msg+=(i+1)+'. '+j.task+'\n';});
+  if(!jobs.length) msg+='No pending tasks\n';
+  msg+='\n📦 *OPENING STOCK: '+stock+' units*\n\n✅ Reply when each delivery is done.\n– Anjani Water';
+  nileshWA(msg);
+}
+
+function sendStockRequest(){
+  var today=new Date().toLocaleDateString('en-GB',{day:'numeric',month:'short',year:'numeric'});
+  var msg='📦 *STOCK REPORT REQUEST*\n📅 '+today+'\n\nNilesh, please reply with:\n\n1️⃣ Stock produced today: ___\n2️⃣ Boxes delivered today: ___\n3️⃣ Cash collected today: ₹___\n4️⃣ New leads met today: ___\n\nExample:\n_Produced: 200, Delivered: 150, Cash: 3500, Leads: 2_\n\n– Anjani Water App';
+  nileshWA(msg);
+}
+
+function sendEveningReport(){
+  var today=new Date().toISOString().split('T')[0];
+  var fmtDate=today.split('-').reverse().join('-');
+  var delivered=(DB.orders||[]).filter(function(o){return o.deliveryDate===today&&o.status==='Delivered';});
+  var pending=(DB.orders||[]).filter(function(o){return o.deliveryDate===today&&o.status==='Pending';});
+  var boxes=delivered.reduce(function(s,o){return s+(Number(o.boxes)||0);},0);
+  var revenue=delivered.reduce(function(s,o){return s+(Number(o.amount)||0);},0);
+  var collected=(DB.payments||[]).filter(function(p){return p.date===today;}).reduce(function(s,p){return s+(Number(p.amount)||0);},0);
+  var doneJobs=(DB.jobs||[]).filter(function(j){return j.status==='Done';});
+  var pendingJobs=(DB.jobs||[]).filter(function(j){return j.status!=='Done';});
+  var msg='🌙 *EVENING REPORT — '+fmtDate+'*\n\n';
+  msg+='✅ *DELIVERED: '+delivered.length+' orders | '+boxes+' boxes*\n';
+  delivered.forEach(function(o){msg+='  • '+o.customer+' — '+o.boxes+' boxes\n';});
+  if(pending.length){msg+='\n⚠️ *STILL PENDING: '+pending.length+'*\n'; pending.forEach(function(o){msg+='  • '+o.customer+' — '+o.boxes+' boxes\n';});}
+  msg+='\n💰 *REVENUE TODAY: ₹'+revenue+'*\n💚 *CASH COLLECTED: ₹'+collected+'*\n\n📋 Tasks Done: '+doneJobs.length+' | Pending: '+pendingJobs.length+'\n';
+  pendingJobs.forEach(function(j){msg+='  • '+j.task+'\n';});
+  msg+='\nPlease reply with closing stock count.\n– Anjani Water';
+  nileshWA(msg);
+}
+
+(function updateBriefLabel(){
+  var hour=new Date().getHours();
+  var label=document.getElementById('smart-brief-label');
+  var hint=document.getElementById('smart-brief-hint');
+  if(!label) return;
+  if(hour<12){label.innerText='🌅 Send Morning Brief to Nilesh'; if(hint) hint.innerText='Tasks + Deliveries + Opening Stock';}
+  else if(hour<17){label.innerText='📦 Request Stock Report from Nilesh'; if(hint) hint.innerText='Asks Nilesh to report stock, cash, leads';}
+  else{label.innerText='🌙 Send Evening Report to Nilesh'; if(hint) hint.innerText='Summary of deliveries, tasks, collections';}
+  setTimeout(updateBriefLabel,60000);
+})();  
 // ============================================================
 // DASHBOARD
 // ============================================================
