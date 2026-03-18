@@ -829,6 +829,7 @@ window.onload = function() {
   loadData();
   // Load chat history
   loadHistory();
+  var ph = document.getElementById('sj-ph'); if(ph && !ph.value) ph.value = '91' + STAFF_NUM;
 };
 
 function loadData() {
@@ -2530,8 +2531,7 @@ function renderJobs() {
   if (!count) list.innerHTML = `<div class="p-8 text-center text-slate-400 text-xs italic">No ${jobFilter} jobs found.</div>`;
   feather.replace();
 }
-var ph = document.getElementById('sj-ph'); if(ph && !ph.value) ph.value = '91' + STAFF_NUM;
-  
+ 
 function runJob(action, id, method) {
   if (action==='CREATE') {
     const input = document.getElementById('job-input');
