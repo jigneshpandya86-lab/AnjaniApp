@@ -2482,7 +2482,7 @@ let lastOrderDate = null, lastOrderQty = 0;
   });
   actions.sort((a,b) => a.priority-b.priority);
   latestSmartActions = actions;
-  if (!actions.length) { list.innerHTML = '<div class="text-center p-10"><div class="text-4xl mb-2">🎉</div><div class="text-slate-400 font-bold">All caught up!<br>No pending calls for today.</div></div>'; return; }
+  if (!actions.length) { list.innerHTML = '<div class="text-center p-10"><div class="text-4xl mb-2">🎉</div><div class="text-slate-400 font-bold">All caught up!<br>No pending calls for today.</div></div>'; }
   actions.forEach(a => {
     const sub = `• ₹${a.bal} (${a.days}d ago)`;
     const encodedMsg = encodeURIComponent(a.msg);
