@@ -2571,7 +2571,7 @@ function runJob(action, id, method) {
 function sjBuildMsg(){
   var p=(DB.jobs||[]).filter(function(j){return j.status!=='Done';});
   if(!p.length){alert('No active jobs!');return null;}
-  return '📋 *Pending Staff Jobs*\n\n'+p.map(function(j,i){return (i+1)+'. '+j.task+' ('+j.status+')';}).join('\n')+'\n\nPlease complete and confirm.\n– Anjani Water';
+  return '📋 *Pending Work*\n\n'+p.map(function(j,i){return (i+1)+'. '+j.task+' ('+j.status+')';}).join('\n')+'\n\nPlease complete and confirm.\n– Anjani Water';
 }
 function sjSendWA(){var m=sjBuildMsg();if(!m)return;var ph=(document.getElementById('sj-ph').value||'').replace(/\D/g,'');window.open(ph?'https://wa.me/'+ph+'?text='+encodeURIComponent(m):'https://wa.me/?text='+encodeURIComponent(m),'_blank');}
 function sjSendSMS(){var m=sjBuildMsg();if(!m)return;var ph=(document.getElementById('sj-ph').value||'').replace(/\D/g,'');window.open('sms:'+(ph?'+'+ph:'')+'?body='+encodeURIComponent(m),'_blank');}
