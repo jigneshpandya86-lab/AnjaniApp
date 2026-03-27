@@ -1563,7 +1563,7 @@ function renderLeads() {
     else if (l.status==='Con') stripClass = 'status-strip-Connected';
     else if (l.status==='Waiting') stripClass = 'status-strip-Follow-up';
     const isWaiting = (l.status==='Waiting' || l.status==='Con');
-    const msgFinal = "🙏 *Jay Shree Krishna!*\n\n*Anjani Water* parivaar ma aapnu swagat chhe! 💧\n\nAapna ghar maate *100% Shudh, Fresh ane Tasty Pani* — har roj seedhi delivery!\n\n━━━━━━━━━━━━━━\n✨ *Kem Anjani Water Choose Karo?*\n💧 Ultra-Pure RO Purified Water\n🏠 Daily Home Delivery — No Hassle\n💰 Sabse Sasti Kimat — Best Value\n🌿 Healthy Pani = Healthy Parivaar\n⚡ Same-Day Delivery Available\n━━━━━━━━━━━━━━\n\n👨‍👩‍👧 *100+ families* already trust us in your area!\n\n📲 Bas *\"YES\"* reply karo — aapna maate *FREE TRIAL* ready chhe!\n\n_Shudh Pani = Swasth Jeevan_ 😊\n\n– *Anjani Water* 💙";
+    const msgFinal = "🙏 *Jay Shree Krishna!*\n\n*Anjani Water* tરફથી aapne contact kari raha chhe! 💧\n\nAame provide kariye chhe *200mL Packaged Drinking Water Bottles* — BIS Certified, ISI Marked, 100% Shudh!\n\n━━━━━━━━━━━━━━\n🏆 *Aapna Business Maate Perfect:*\n🎪 Events & Functions\n🏢 Corporate Offices\n💒 Weddings & Receptions\n🍽️ Caterers & Banquets\n🏬 Showrooms & Retail\n━━━━━━━━━━━━━━\n\n✅ *Kem Anjani Water?*\n💧 ISI / BIS Certified Quality\n📦 Bulk Orders — Best Price Guaranteed\n🚚 On-Time Delivery, Every Time\n🤝 Trusted by 50+ Businesses Locally\n\n📲 *Aaj j \"YES\" reply karo* — FREE Sample Bottle moksho!\n\n_Aapna guests ne pilaavo sabse shudh pani_ 😊\n\n– *Anjani Water* 💙\n📞 Reply for Bulk Rates & Orders";
     const nileshMsg = `Nilesh, Call, Meet and Give Samples to this new lead: ${l.mobile}`;
     const hasNote = l.notes && l.notes.length > 0;
     const noteBtn = `<button onclick="openNote('${l.id}')" class="w-8 h-8 rounded-lg border flex items-center justify-center transition active:scale-95 ${hasNote?'bg-amber-100 text-amber-700 border-amber-200':'bg-slate-50 text-slate-400 border-slate-200 hover:bg-blue-50 hover:text-blue-500'}"><i data-feather="${hasNote?'file-text':'edit-2'}" class="w-4 h-4"></i></button>`;
@@ -2940,9 +2940,9 @@ function startSmartBroadcast() {
     const diff = Math.round((today-lastDate)/oneDay);
     if (l.status!=='New' && diff<2) return;
     let msg = "";
-    if (l.status==='New') msg = "🙏 Jay Shree Krishna!\n\n*Anjani Water* ma aapnu swagat chhe! 💧\n\n✨ 100% Shudh RO Pani, daily home delivery\n💰 Best rates in your area\n👨‍👩‍👧 100+ families already trust us!\n\nBas *\"YES\"* reply karo — FREE TRIAL ready chhe!\n\n– Anjani Water 💙";
-    else if (l.status==='Sam' && diff>=2) msg = "Hello! 200mL Pani no order chhe? Anjani Water.";
-    else if ((l.status==='Waiting'||l.status==='Con') && diff>=5) msg = "Jay Shree Krishna. Pani ni jarur chhe? Anjani Water.";
+    if (l.status==='New') msg = "🙏 Jay Shree Krishna!\n\n*Anjani Water* tরফthI contact kari raha chhe 💧\n\nAame provide kariye chhe *200mL Packaged Drinking Water Bottles* — ISI Certified, Bulk Supply!\n\n🎪 Events | 🏢 Offices | 💒 Weddings | 🍽️ Caterers | 🏬 Showrooms\n\n📦 Bulk Orders — Best Price\n🚚 On-Time Delivery Guaranteed\n\n*\"YES\"* reply karo — FREE Sample mokalshu!\n\n– Anjani Water 💙";
+    else if (l.status==='Sam' && diff>=2) msg = "🙏 Jay Shree Krishna!\n\nAnjani Water — *200mL Bottle* no bulk order ready chhe?\n\n🎪 Events / 🏢 Offices / 💒 Weddings maate best rates!\n\nRate list maate reply karo. – Anjani Water 💧";
+    else if ((l.status==='Waiting'||l.status==='Con') && diff>=5) msg = "🙏 Jay Shree Krishna!\n\nAnjani Water thi yaad kariye chhe 💧\n\n*200mL Packaged Water* — aapna next event / function maate order ready chhe?\n\nAaj j confirm karo — on-time delivery guaranteed! – Anjani Water";
     if (msg) bcQueue.push({id:l.id, name:"Lead: "+l.mobile, mobile:l.mobile, customMsg:msg, type:'LEAD_NUDGE'});
   });
   if (!bcQueue.length) return alert("✅ No pending tasks!");
