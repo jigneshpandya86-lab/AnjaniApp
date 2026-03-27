@@ -148,7 +148,7 @@
     <button onclick="go('customers')" id="d-btn-customers" class="nav-item w-full flex items-center px-6 py-4 font-bold text-sm"><i data-feather="users" class="mr-3 w-5 h-5"></i> ANJANI_AI</button>
     <button onclick="go('leads')" id="d-btn-leads" class="nav-item w-full flex items-center px-6 py-4 font-bold text-sm"><i data-feather="target" class="mr-3 w-5 h-5"></i> LEADS</button>
     <button onclick="go('stock')" id="d-btn-stock" class="nav-item w-full flex items-center px-6 py-4 font-bold text-sm"><i data-feather="package" class="mr-3 w-5 h-5"></i> STOCK</button>
-    <button onclick="go('smart')" id="d-btn-smart" class="nav-item w-full flex items-center px-6 py-4 font-bold text-sm text-purple-600"><i data-feather="zap" class="mr-3 w-5 h-5"></i> SMART ACTIONS</button>
+    <button onclick="go('smart')" id="d-btn-smart" class="nav-item w-full flex items-center px-6 py-4 font-bold text-sm text-purple-600"><i data-feather="zap" class="mr-3 w-5 h-5"></i> SMART ACTIONS <span id="smart-badge-desk" class="hidden ml-auto bg-orange-500 text-white text-[9px] font-black px-1.5 py-0.5 rounded-full min-w-[18px] text-center"></span></button>
     <button onclick="go('dashboard')" id="d-btn-dashboard" class="nav-item w-full flex items-center px-6 py-4 font-bold text-sm"><i data-feather="grid" class="mr-3 w-5 h-5"></i> DASHBOARD</button>
   </nav>
   <!-- Offline status in sidebar -->
@@ -483,6 +483,11 @@
   <button onclick="sjSendSMS()" class="flex-1 bg-indigo-600 text-white rounded-lg text-xs font-bold py-2 flex items-center justify-center gap-1"><i data-feather="message-square" class="w-3 h-3"></i> SMS</button>
   <button onclick="sjSendWA();setTimeout(sjSendSMS,800)" class="flex-1 bg-purple-600 text-white rounded-lg text-xs font-bold py-2">⚡ Both</button>
 </div>
+<div id="due-followup-bar" class="hidden p-3 border-t border-orange-100 bg-orange-50">
+  <button onclick="sendAllDueFollowUps()" class="w-full bg-orange-500 text-white rounded-lg text-xs font-bold py-2.5 flex items-center justify-center gap-2 active:scale-95 transition hover:bg-orange-600">
+    <i data-feather="refresh-cw" class="w-3 h-3"></i> Follow Up All Overdue Tasks
+  </button>
+</div>
     </div>
     <!-- NILESH BRIEF SECTION -->
 <div class="bg-white rounded-xl border border-slate-200 shadow-sm mb-6 overflow-hidden">
@@ -496,6 +501,18 @@
       <span id="smart-brief-label">Send Nilesh Brief</span>
     </button>
     <div id="smart-brief-hint" class="text-center text-[10px] text-slate-400 font-bold mt-2"></div>
+  </div>
+</div>
+
+<!-- DAILY AUTOMATION SECTION -->
+<div class="bg-white rounded-xl border border-slate-200 shadow-sm mb-6 overflow-hidden">
+  <div class="bg-slate-50 p-4 border-b border-slate-200 flex justify-between items-center">
+    <h3 class="font-black text-slate-700 text-sm uppercase tracking-wide flex items-center gap-2"><i data-feather="clock" class="w-4 h-4 text-purple-600"></i> Daily Automation</h3>
+    <span class="text-[10px] text-purple-600 font-bold bg-purple-50 px-2 py-0.5 rounded-full border border-purple-100">AUTO</span>
+  </div>
+  <div id="daily-status-list" class="divide-y divide-slate-100"></div>
+  <div class="p-3 bg-slate-50 border-t border-slate-100">
+    <p class="text-[10px] text-slate-400 text-center">Checkpoints reset daily at midnight</p>
   </div>
 </div>
 
@@ -552,7 +569,7 @@
   <button onclick="go('customers')" id="m-btn-customers" class="mob-item flex flex-col items-center justify-center w-12 h-full gap-1"><i data-feather="users" class="w-5 h-5"></i><span class="text-[9px] font-medium">AI</span></button>
   <button onclick="go('leads')" id="m-btn-leads" class="mob-item flex flex-col items-center justify-center w-12 h-full gap-1"><i data-feather="target" class="w-5 h-5"></i><span class="text-[9px] font-medium">Leads</span></button>
   <button onclick="go('stock')" id="m-btn-stock" class="mob-item flex flex-col items-center justify-center w-12 h-full gap-1"><i data-feather="package" class="w-5 h-5"></i><span class="text-[9px] font-medium">Stock</span></button>
-  <button onclick="go('smart')" id="m-btn-smart" class="mob-item flex flex-col items-center justify-center w-12 h-full gap-1 text-purple-600"><i data-feather="zap" class="w-5 h-5"></i><span class="text-[9px] font-medium">Smart</span></button>
+  <button onclick="go('smart')" id="m-btn-smart" class="mob-item flex flex-col items-center justify-center w-12 h-full gap-1 text-purple-600 relative"><i data-feather="zap" class="w-5 h-5"></i><span class="text-[9px] font-medium">Smart</span><span id="smart-badge-mob" class="hidden absolute top-1 right-0.5 bg-orange-500 text-white text-[8px] font-black px-1 py-0.5 rounded-full min-w-[14px] text-center leading-none"></span></button>
   <button onclick="go('dashboard')" id="m-btn-dashboard" class="mob-item flex flex-col items-center justify-center w-12 h-full gap-1"><i data-feather="grid" class="w-5 h-5"></i><span class="text-[9px] font-medium">Dash</span></button>
 </nav>
 
@@ -983,7 +1000,7 @@ function go(p) {
   if (p === 'stock') { renderStockPage(); }
   if (p === 'payments') { renderRecentPayments(); }
   if (p === 'dashboard') { if (typeof renderDashboard === 'function') renderDashboard(); }
-  if (p === 'smart') { if (typeof renderSmartActions === 'function') renderSmartActions(); renderJobs(); }
+  if (p === 'smart') { if (typeof renderSmartActions === 'function') renderSmartActions(); renderJobs(); renderDailyStatus(); updateSmartBadge(); }
   window.scrollTo(0,0);
 }
 
@@ -2536,7 +2553,9 @@ function renderJobs() {
     }
     let buttons = '';
     if (jobFilter==='Active') {
-      buttons = `<div class="flex gap-2 shrink-0 ml-2"><button onclick="runJob('SENT','${j.id}','WA')" class="w-9 h-9 rounded-lg bg-green-50 text-green-600 border border-green-100 flex items-center justify-center hover:bg-green-100 transition active:scale-95 shadow-sm"><i data-feather="message-circle" class="w-4 h-4"></i></button><button onclick="runJob('SENT','${j.id}','SMS')" class="w-9 h-9 rounded-lg bg-indigo-50 text-indigo-600 border border-indigo-100 flex items-center justify-center hover:bg-indigo-100 transition active:scale-95 shadow-sm"><i data-feather="message-square" class="w-4 h-4"></i></button><button onclick="runJob('DONE','${j.id}')" class="w-9 h-9 rounded-lg bg-slate-800 text-white border border-slate-700 flex items-center justify-center hover:bg-slate-700 transition active:scale-95 shadow-sm"><i data-feather="check" class="w-4 h-4"></i></button></div>`;
+      const jobIsDue = j.status==='Sent' && j.followUp <= todayStr;
+      const fuBtn = jobIsDue ? `<button onclick="sendJobFollowUp('${j.id}')" class="w-9 h-9 rounded-lg bg-orange-50 text-orange-600 border border-orange-200 flex items-center justify-center hover:bg-orange-100 transition active:scale-95 shadow-sm" title="Follow Up"><i data-feather="refresh-cw" class="w-4 h-4"></i></button>` : '';
+      buttons = `<div class="flex gap-2 shrink-0 ml-2">${fuBtn}<button onclick="runJob('SENT','${j.id}','WA')" class="w-9 h-9 rounded-lg bg-green-50 text-green-600 border border-green-100 flex items-center justify-center hover:bg-green-100 transition active:scale-95 shadow-sm"><i data-feather="message-circle" class="w-4 h-4"></i></button><button onclick="runJob('SENT','${j.id}','SMS')" class="w-9 h-9 rounded-lg bg-indigo-50 text-indigo-600 border border-indigo-100 flex items-center justify-center hover:bg-indigo-100 transition active:scale-95 shadow-sm"><i data-feather="message-square" class="w-4 h-4"></i></button><button onclick="runJob('DONE','${j.id}')" class="w-9 h-9 rounded-lg bg-slate-800 text-white border border-slate-700 flex items-center justify-center hover:bg-slate-700 transition active:scale-95 shadow-sm"><i data-feather="check" class="w-4 h-4"></i></button></div>`;
     } else {
       buttons = `<div class="flex gap-2 shrink-0 ml-2"><button onclick="runJob('UNDO','${j.id}')" class="px-3 h-8 bg-white border border-slate-200 text-slate-500 rounded-lg text-[10px] font-bold hover:bg-slate-50 transition">↺ UNDO</button></div>`;
       statusBadge = '<span class="text-[9px] text-green-600 font-bold ml-2">✔ DONE</span>';
@@ -2545,6 +2564,7 @@ function renderJobs() {
   });
   if (!count) list.innerHTML = `<div class="p-8 text-center text-slate-400 text-xs italic">No ${jobFilter} jobs found.</div>`;
   feather.replace();
+  if (typeof updateSmartBadge === 'function') updateSmartBadge();
 }
  
 function runJob(action, id, method) {
@@ -2576,6 +2596,117 @@ function sjBuildMsg(){
 function sjSendWA(){var m=sjBuildMsg();if(!m)return;var ph=(document.getElementById('sj-ph').value||'').replace(/\D/g,'');window.open(ph?'https://wa.me/'+ph+'?text='+encodeURIComponent(m):'https://wa.me/?text='+encodeURIComponent(m),'_blank');}
 function sjSendSMS(){var m=sjBuildMsg();if(!m)return;var ph=(document.getElementById('sj-ph').value||'').replace(/\D/g,'');window.open('sms:'+(ph?'+'+ph:'')+'?body='+encodeURIComponent(m),'_blank');}
 function nileshWA(msg){window.open('https://wa.me/91'+STAFF_NUM+'?text='+encodeURIComponent(msg),'_blank');}
+
+// ============================================================
+// FOLLOW-UP AUTOMATION
+// ============================================================
+function sendJobFollowUp(id) {
+  var job = (DB.jobs||[]).find(function(j){return j.id===id;});
+  if (!job) return;
+  var msg = '🔁 *Follow Up — ' + job.task + '*\n\nNilesh, is kaam ka status kya hai? Kab tak hoga?\n– Anjani Water';
+  nileshWA(msg);
+  var tomorrow = new Date(); tomorrow.setDate(tomorrow.getDate()+1);
+  job.followUp = tomorrow.toLocaleDateString('en-CA');
+  job.status = 'Sent';
+  renderJobs();
+  updateSmartBadge();
+  google.script.run.saveJob({action:'SENT', id:id});
+}
+
+function sendAllDueFollowUps() {
+  var todayStr = new Date().toLocaleDateString('en-CA');
+  var dueJobs = (DB.jobs||[]).filter(function(j){return j.status==='Sent' && j.followUp<=todayStr;});
+  if (!dueJobs.length) { showToast('No overdue tasks!'); return; }
+  var msg = '🔁 *Follow Up — ' + dueJobs.length + ' Pending Tasks*\n\n';
+  dueJobs.forEach(function(j,i){msg += (i+1)+'. '+j.task+'\n';});
+  msg += '\nNilesh, inn sab ka status batao.\n– Anjani Water';
+  nileshWA(msg);
+  var tomorrow = new Date(); tomorrow.setDate(tomorrow.getDate()+1);
+  var tomorrowStr = tomorrow.toLocaleDateString('en-CA');
+  dueJobs.forEach(function(j){j.followUp=tomorrowStr;});
+  renderJobs();
+  updateSmartBadge();
+}
+
+function updateSmartBadge() {
+  var todayStr = new Date().toLocaleDateString('en-CA');
+  var dueCount = (DB.jobs||[]).filter(function(j){return j.status==='Sent' && j.followUp<=todayStr;}).length;
+  ['smart-badge-desk','smart-badge-mob'].forEach(function(elId){
+    var el = document.getElementById(elId);
+    if (!el) return;
+    if (dueCount > 0) { el.textContent = dueCount; el.classList.remove('hidden'); }
+    else { el.classList.add('hidden'); }
+  });
+  var bar = document.getElementById('due-followup-bar');
+  if (bar) bar.classList.toggle('hidden', dueCount===0);
+}
+
+// ============================================================
+// DAILY STATUS AUTOMATION
+// ============================================================
+var DAILY_CHECKPOINTS = [
+  {key:'morning',   hour:8,  label:'Morning Brief',        hint:'Deliveries + Tasks + Opening Stock',        icon:'🌅', fn:'sendMorningBrief'},
+  {key:'afternoon', hour:14, label:'Stock Report Request', hint:'Asks Nilesh to report stock, cash, leads',  icon:'📦', fn:'sendStockRequest'},
+  {key:'evening',   hour:18, label:'Evening Summary',      hint:'Deliveries done, tasks status, collections', icon:'🌙', fn:'sendEveningReport'}
+];
+
+function getDailyStorageKey(key) {
+  var today = new Date().toLocaleDateString('en-CA');
+  return 'anjani_daily_'+key+'_'+today;
+}
+function markDailySent(key) { localStorage.setItem(getDailyStorageKey(key), new Date().toISOString()); }
+function isDailySent(key)   { return !!localStorage.getItem(getDailyStorageKey(key)); }
+
+function renderDailyStatus() {
+  var list = document.getElementById('daily-status-list');
+  if (!list) return;
+  var now = new Date();
+  var currentHour = now.getHours();
+  var html = '';
+  DAILY_CHECKPOINTS.forEach(function(cp) {
+    var sent = isDailySent(cp.key);
+    var isDue = currentHour >= cp.hour;
+    var nextTime = new Date(); nextTime.setHours(cp.hour,0,0,0);
+    if (nextTime <= now) nextTime.setDate(nextTime.getDate()+1);
+    var diffMs = nextTime - now;
+    var diffH = Math.floor(diffMs/3600000);
+    var diffM = Math.floor((diffMs%3600000)/60000);
+    var countdown = diffH>0 ? diffH+'h '+diffM+'m' : diffM+'m';
+    var badge, rowClass, btnCls;
+    if (sent) {
+      badge = '<span class="text-[9px] text-green-600 font-bold bg-green-50 px-2 py-0.5 rounded-full border border-green-100">✅ Sent</span>';
+      rowClass = 'opacity-70';
+      btnCls = 'bg-slate-100 text-slate-400 hover:bg-slate-200';
+    } else if (isDue) {
+      badge = '<span class="text-[9px] text-orange-600 font-bold bg-orange-50 px-2 py-0.5 rounded-full border border-orange-100 animate-pulse">🔥 Due Now</span>';
+      rowClass = 'border-l-4 border-orange-400 bg-orange-50/30';
+      btnCls = 'bg-orange-500 text-white hover:bg-orange-600';
+    } else {
+      badge = '<span class="text-[9px] text-slate-400 font-bold bg-slate-50 px-2 py-0.5 rounded-full border border-slate-200">⏳ in '+countdown+'</span>';
+      rowClass = '';
+      btnCls = 'bg-slate-800 text-white hover:bg-slate-700';
+    }
+    html += '<div class="p-3 '+rowClass+' flex items-center justify-between">'
+          + '<div class="min-w-0 flex-1">'
+          +   '<div class="flex items-center gap-2 flex-wrap"><span class="text-sm font-bold text-slate-800">'+cp.icon+' '+cp.label+'</span>'+badge+'</div>'
+          +   '<div class="text-[10px] text-slate-400 mt-0.5">'+cp.hint+'</div>'
+          + '</div>'
+          + '<button onclick="triggerDailyCheckpoint(\''+cp.key+'\')" class="ml-3 px-3 py-1.5 '+btnCls+' rounded-lg text-[10px] font-bold transition shrink-0 active:scale-95">'+(sent?'Resend':'Send Now')+'</button>'
+          + '</div>';
+  });
+  list.innerHTML = html;
+  feather.replace();
+}
+
+function triggerDailyCheckpoint(key) {
+  var cp = DAILY_CHECKPOINTS.find(function(c){return c.key===key;});
+  if (!cp) return;
+  window[cp.fn]();
+  markDailySent(key);
+  renderDailyStatus();
+}
+
+setInterval(renderDailyStatus, 60000);
 
 function sendSmartBrief(){
   var hour=new Date().getHours();
