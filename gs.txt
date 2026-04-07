@@ -27,6 +27,7 @@ function getFirestore() {
 /**
  * Creates a lead/contact record in Firestore.
  * Used by background scrapers to save normalized lead contacts.
+ * Firebase payload is intentionally limited to the required schema only.
  *
  * @param {Object} leadData - Lead payload values.
  * @returns {Object} created lead record.
@@ -41,14 +42,13 @@ function createLeadContact(leadData) {
     mobile: payload.mobile || '',
     name: payload.name || 'Unknown Lead',
     source: payload.source || LEAD_SOURCES.MANUAL,
-    tag: payload.tag || null,
-    status: payload.status || 'New',
+    Tag: payload.Tag || payload.tag || null,
     createdAt: payload.createdAt || now.toISOString(),
-    createdDate: payload.createdDate || now.toISOString().split('T')[0],
-    address: payload.address || 'Not Available',
-    product: payload.product || 'General Enquiry',
-    raw: payload.raw || '',
-    notes: payload.notes || ''
+    followUpStep: Number(payload.followUpStep || 0),
+    lastSmsAt: payload.lastSmsAt || now.toISOString(),
+    nextFollowUpAt: payload.nextFollowUpAt || null,
+    smsCount: Number(payload.smsCount || 0),
+    smsSentAt: payload.smsSentAt || null
   };
 
   firestore.createDocument('leads/' + newLead.id, newLead);
@@ -117,14 +117,13 @@ function processIndiaMartEmailsToFirebase() {
           mobile: validMob,
           name: finalName,
           source: LEAD_SOURCES.INDIAMART,
-          tag: null,
-          status: 'New',
+          Tag: null,
           createdAt: new Date().toISOString(),
-          createdDate: new Date().toISOString().split('T')[0],
-          address: loc || "Not Available",
-          product: product,
-          raw: `${finalName} | ${loc} | ${product} | ${validMob}`,
-          notes: `Name: ${finalName}\nAddr: ${loc}\nProduct: ${product}`
+          followUpStep: 0,
+          lastSmsAt: null,
+          nextFollowUpAt: null,
+          smsCount: 0,
+          smsSentAt: null
         });
 
         console.log(`✅ Saved Lead to Firebase: ${finalName} (${validMob}) | Source: ${newLead.source}`);
@@ -188,14 +187,13 @@ function huntDailyLeadsToFirebase() {
         mobile: cleanPhone,
         name: 'Facebook Lead',
         source: LEAD_SOURCES.FACEBOOK,
-        tag: null,
-        status: 'New',
+        Tag: null,
         createdAt: new Date().toISOString(),
-        createdDate: new Date().toISOString().split('T')[0],
-        address: addr,
-        product: keyword,
-        raw: `Facebook Lead | ${addr} | ${cleanPhone}`,
-        notes: `Source: Google Maps\nOriginal Name: ${name}\nArea: ${area}\nType: ${keyword}\nRating: ${rating || "N/A"}`
+        followUpStep: 0,
+        lastSmsAt: null,
+        nextFollowUpAt: null,
+        smsCount: 0,
+        smsSentAt: null
       });
 
       saved++;
@@ -239,12 +237,13 @@ function addFacebookLeadContact(mobile, extraData) {
     mobile: cleanMobile,
     name: 'Facebook Lead',
     source: LEAD_SOURCES.FACEBOOK,
-    tag: payload.tag || null,
-    status: payload.status || 'New',
-    address: payload.address || 'Not Available',
-    product: payload.product || 'Facebook Enquiry',
-    raw: `Facebook Lead | ${cleanMobile}`,
-    notes: payload.notes || 'Added as Facebook Lead contact'
+    Tag: payload.Tag || payload.tag || null,
+    createdAt: payload.createdAt || new Date().toISOString(),
+    followUpStep: Number(payload.followUpStep || 0),
+    lastSmsAt: payload.lastSmsAt || null,
+    nextFollowUpAt: payload.nextFollowUpAt || null,
+    smsCount: Number(payload.smsCount || 0),
+    smsSentAt: payload.smsSentAt || null
   });
 
   console.log(`✅ Saved Facebook Lead Contact: ${cleanMobile}`);
