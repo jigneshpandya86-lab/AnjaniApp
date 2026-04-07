@@ -1,24 +1,4 @@
 // ============================================================
-// FIREBASE BACKGROUND JOBS (IndiaMART, Maps, SMS)
-// ============================================================
-
-// ============================================================
-// 🔐 SENSITIVE CREDENTIALS - MOVE TO GAS SECRETS ASAP!
-// ============================================================
-const FIREBASE_SERVICE_ACCOUNT_EMAIL = "lead-scraper@anjaniappnew.iam.gserviceaccount.com";
-const FIREBASE_PRIVATE_KEY = "-----BEGIN PRIVATE KEY-----\nMIIEvAIBADANBgkqhkiG9w0BAQEFAASCBKYwggSiAgEAAoIBAQCnSksE9TAZ9BHH\nV2nnSNVfTkt5t8o2QsFnc8AdcyGJCAOGBbVQ9AZiXlSjiUGl4bAyLufjocqpWQHP\nSuC9K7sRWzd5FrmyLdR+ttOuJzGvaIc9wxLIrmxhdIn1a8Ru3XzkDV4SREyrmGWV\nSqjBBmBHbSWUTFneW9FCOpqMoURNUBqecKX+AyYFcm6iaFSibNv3V+wUBottpuVn\nNg8GkvruuudtK+OBZBgyfWR9VkvGFU/m25PE5+egh2cHu3vqjqQT95ZGiuBpecy1\nZN2g1I99U4oMXIsvllCCrdwT6Tvy4uC13PAIRYdVmdzqmh+UxEPuGLA9gEFBchDm\nd7taip6DAgMBAAECggEACLC60fCcxZRgwg6/8SRe9Tr/f7y08/mmy2V/cugys0gn\nyrQMNb7fgAevdOlh8CiXuxulrzUN7psxlV+p6hnV93JaIN+12NQ5qDV+LJtboOWY\ntPQnyyYIek2QByBIjYvS+5PYMbG7m+RoToeY2aInqT45yAjpWDxD1CFwOuL7xdpQ\nYjN/IrSKWmHp2dt2P1TGay5yl47oCi8YmrF7zXLHR+a+RembrWo696aMfv6QPnTo\nOtIlcR83+PeAq3HWSl0Js59XUbrToBip0ycVp6igye0CFt1g7C966bDX2RTdB1VU\nui4pdbj2h30eM3v8Dk1s4J6CcTCMRM4S8fnLOBAbGQKBgQDdzI++ccp0ndTUuPZo\n2EnOPHao8AsoamrpMOktBIWaU5UOk/pUc/Gm0hiWcaEr7/oR5TVpRg7IZMGSkSzV\nKxHKJS0MDXRwOnA+52W1MqlOXX/JOgYJDjqxRhtFeUAd4v2pEp3wyD6Yf/qn4WaM\nd8oNm1uMdZ8SevgXykKoGn3qOQKBgQDBFgOLOy+grgPsaugU3IUzjl/x0TFefoFx\nfnFj38uG+rfmQkl2w0/mWcaCW++IWvbCQa/Fae6VPMouUxo7gWPOfbueQcybpunT\n5l3Xpy7K4HQRI5aNcTjMrcviN80qOpQwy0uoJVa7qwz6HQBTlvtm26ObSaDum5b6\nuR7XLjQ+mwKBgEbtyfIfNZ1Bc/RrCfHRaRjY4SF5Ujgkf/f+ujK5RXhqzjoRPHaR\ndW/htBc4U1BXt+LNJ914l/Whsv2KC4pH8bJxXQyDqP7S0V5sZWwivV3gLKNPOOrg\ncAiM4N/AvK5SDshoubVsdAgUtTXGsSKulCDx078BRlOEm54QAmz7u9SRAoGAL1Jz\n3+XLkHfVolW5N5OsWaxlO2Dn1p7unqA8rhulSBmehKJuWtsXc/9AtaZOmH6ix41N\nxPZncNALRTs8zKSzj2IlX24E9Yj8+eAV08q3nyVPjPvJ5DSBlThrJbBDajwdIbBR\nhI5SKYCMl6gP8myohNcDzAVJmfEsGZrRQi+iwk0CgYBRQDiWCoULhFTlnH3Yd+po\nUvdG+bVZYVoWiV5hSdC+L7iVNU4teaYOYXsZJelyPS8qBiI2Pj3gPkLvdxBKg2to\nSIUlP16vLS3pPBMbZBaWl7Rp9SjUOPIkj63udP6Ge91IPq39vifedGNz5/aIgIUy\n0k0ryIP+sCpxeBNxa76Zxg==\n-----END PRIVATE KEY-----\n";
-const FIREBASE_PROJECT_ID = "anjaniappnew";
-
-// ============================================================
-// 📍 GOOGLE MAPS & LOCATION CONFIG
-// ============================================================
-const MAPS_KEY = "YOUR_GOOGLE_MAPS_API_KEY_HERE"; // Replace with actual key
-const TARGET_CITY = "Vadodara, Gujarat";
-const TARGET_AREAS = ["Manjalpur", "Alkapuri", "Karelibaug", "Fatehgunj"];
-const TARGET_KEYWORDS = ["Caterers", "Banquet Halls", "Restaurant"];
-const MAPS_DAILY_LIMIT = 5; // Max leads per hunt
-
-// ============================================================
 // 📧 GMAIL SEARCH FILTERS
 // ============================================================
 const GMAIL_SEARCH_QUERY = 'subject:("Enquiry for" OR "Requirement" OR "Contact") is:unread';
