@@ -1,0 +1,213 @@
+// ============================================================
+// FIREBASE BACKGROUND JOBS (IndiaMART, Maps, SMS)
+// ============================================================
+
+// ============================================================
+// 🔐 SENSITIVE CREDENTIALS - MOVE TO GAS SECRETS ASAP!
+// ============================================================
+const FIREBASE_SERVICE_ACCOUNT_EMAIL = "lead-scraper@anjaniappnew.iam.gserviceaccount.com";
+const FIREBASE_PRIVATE_KEY = "-----BEGIN PRIVATE KEY-----\nMIIEvAIBADANBgkqhkiG9w0BAQEFAASCBKYwggSiAgEAAoIBAQCnSksE9TAZ9BHH\nV2nnSNVfTkt5t8o2QsFnc8AdcyGJCAOGBbVQ9AZiXlSjiUGl4bAyLufjocqpWQHP\nSuC9K7sRWzd5FrmyLdR+ttOuJzGvaIc9wxLIrmxhdIn1a8Ru3XzkDV4SREyrmGWV\nSqjBBmBHbSWUTFneW9FCOpqMoURNUBqecKX+AyYFcm6iaFSibNv3V+wUBottpuVn\nNg8GkvruuudtK+OBZBgyfWR9VkvGFU/m25PE5+egh2cHu3vqjqQT95ZGiuBpecy1\nZN2g1I99U4oMXIsvllCCrdwT6Tvy4uC13PAIRYdVmdzqmh+UxEPuGLA9gEFBchDm\nd7taip6DAgMBAAECggEACLC60fCcxZRgwg6/8SRe9Tr/f7y08/mmy2V/cugys0gn\nyrQMNb7fgAevdOlh8CiXuxulrzUN7psxlV+p6hnV93JaIN+12NQ5qDV+LJtboOWY\ntPQnyyYIek2QByBIjYvS+5PYMbG7m+RoToeY2aInqT45yAjpWDxD1CFwOuL7xdpQ\nYjN/IrSKWmHp2dt2P1TGay5yl47oCi8YmrF7zXLHR+a+RembrWo696aMfv6QPnTo\nOtIlcR83+PeAq3HWSl0Js59XUbrToBip0ycVp6igye0CFt1g7C966bDX2RTdB1VU\nui4pdbj2h30eM3v8Dk1s4J6CcTCMRM4S8fnLOBAbGQKBgQDdzI++ccp0ndTUuPZo\n2EnOPHao8AsoamrpMOktBIWaU5UOk/pUc/Gm0hiWcaEr7/oR5TVpRg7IZMGSkSzV\nKxHKJS0MDXRwOnA+52W1MqlOXX/JOgYJDjqxRhtFeUAd4v2pEp3wyD6Yf/qn4WaM\nd8oNm1uMdZ8SevgXykKoGn3qOQKBgQDBFgOLOy+grgPsaugU3IUzjl/x0TFefoFx\nfnFj38uG+rfmQkl2w0/mWcaCW++IWvbCQa/Fae6VPMouUxo7gWPOfbueQcybpunT\n5l3Xpy7K4HQRI5aNcTjMrcviN80qOpQwy0uoJVa7qwz6HQBTlvtm26ObSaDum5b6\nuR7XLjQ+mwKBgEbtyfIfNZ1Bc/RrCfHRaRjY4SF5Ujgkf/f+ujK5RXhqzjoRPHaR\ndW/htBc4U1BXt+LNJ914l/Whsv2KC4pH8bJxXQyDqP7S0V5sZWwivV3gLKNPOOrg\ncAiM4N/AvK5SDshoubVsdAgUtTXGsSKulCDx078BRlOEm54QAmz7u9SRAoGAL1Jz\n3+XLkHfVolW5N5OsWaxlO2Dn1p7unqA8rhulSBmehKJuWtsXc/9AtaZOmH6ix41N\nxPZncNALRTs8zKSzj2IlX24E9Yj8+eAV08q3nyVPjPvJ5DSBlThrJbBDajwdIbBR\nhI5SKYCMl6gP8myohNcDzAVJmfEsGZrRQi+iwk0CgYBRQDiWCoULhFTlnH3Yd+po\nUvdG+bVZYVoWiV5hSdC+L7iVNU4teaYOYXsZJelyPS8qBiI2Pj3gPkLvdxBKg2to\nSIUlP16vLS3pPBMbZBaWl7Rp9SjUOPIkj63udP6Ge91IPq39vifedGNz5/aIgIUy\n0k0ryIP+sCpxeBNxa76Zxg==\n-----END PRIVATE KEY-----\n";
+const FIREBASE_PROJECT_ID = "anjaniappnew";
+
+// ============================================================
+// 📍 GOOGLE MAPS & LOCATION CONFIG
+// ============================================================
+const MAPS_KEY = "YOUR_GOOGLE_MAPS_API_KEY_HERE"; // Replace with actual key
+const TARGET_CITY = "Vadodara, Gujarat";
+const TARGET_AREAS = ["Manjalpur", "Alkapuri", "Karelibaug", "Fatehgunj"];
+const TARGET_KEYWORDS = ["Caterers", "Banquet Halls", "Restaurant"];
+const MAPS_DAILY_LIMIT = 5; // Max leads per hunt
+
+// ============================================================
+// 📧 GMAIL SEARCH FILTERS
+// ============================================================
+const GMAIL_SEARCH_QUERY = 'subject:("Enquiry for" OR "Requirement" OR "Contact") is:unread';
+
+// ============================================================
+// 🏷️ TAG CONSTANTS
+// ============================================================
+const LEAD_SOURCES = {
+  INDIAMART: "indiamart",
+  MAPS: "google-maps",
+  MANUAL: "manual",
+  FACEBOOK: "facebook"
+};
+
+// ============================================================
+// Firebase Connection Helper
+// ============================================================
+function getFirestore() {
+  return FirestoreApp.getFirestore(
+    FIREBASE_SERVICE_ACCOUNT_EMAIL,
+    FIREBASE_PRIVATE_KEY,
+    FIREBASE_PROJECT_ID
+  );
+}
+
+// ============================================================
+// 📧 1. SCRAPE INDIAMART & PUSH TO FIREBASE (Original Logic)
+// ============================================================
+function processIndiaMartEmailsToFirebase() {
+  console.log("Starting IndiaMART Email Processor...");
+  const firestore = getFirestore();
+  
+  const threads = GmailApp.search(GMAIL_SEARCH_QUERY);
+  let count = 0;
+  let sessionNumbers = new Set();
+
+  threads.forEach(thread => {
+    const m = thread.getMessages()[0]; // First message only
+
+    try {
+      const plainBody = m.getPlainBody();
+      const htmlBody  = m.getBody();
+      const subject   = m.getSubject();
+      const massiveBlock = plainBody + " " + htmlBody;
+
+      let validMob = null;
+      const rawMatches = massiveBlock.match(/\d{10,13}/g) || [];
+
+      for (let raw of rawMatches) {
+        const clean = raw.slice(-10);
+        if (!['6','7','8','9'].includes(clean[0])) continue;
+        if (clean.startsWith("800") || clean.startsWith("1800")) continue;
+        if (sessionNumbers.has(clean)) { validMob = null; break; }
+        validMob = clean;
+        break;
+      }
+
+      if (validMob) {
+        sessionNumbers.add(validMob);
+
+        const lines = plainBody.split('\n').map(l => l.trim()).filter(l => l.length > 0);
+        let extractedName = "Unknown";
+        let loc = "";
+
+        const regardsIdx = lines.findIndex(l => l.toLowerCase().startsWith("regards"));
+        if (regardsIdx !== -1 && regardsIdx + 1 < lines.length) {
+          extractedName = lines[regardsIdx + 1];
+          for (let i = regardsIdx + 2; i < regardsIdx + 8; i++) {
+            if (i >= lines.length) break;
+            const line = lines[i];
+            const low  = line.toLowerCase();
+            if (low.includes("@") || low.includes("mobile") || low.includes("call")) continue;
+            if (line.replace(/\D/g,'').includes(validMob)) continue;
+            if (low.includes("member since") || low.includes("gst") || low.includes("verified") || line.length < 3) continue;
+            loc = line;
+            break;
+          }
+        }
+
+        const prodMatch = subject.match(/Enquiry for\s+(.+?)(\s+from|$)/i);
+        const product   = prodMatch ? prodMatch[1].trim() : "General Enquiry";
+        const finalName = extractedName !== "Unknown" ? extractedName : "IndiaMART Lead";
+
+        // --- FIREBASE PUSH WITH MATCHING FIELDS ---
+        const newLead = {
+          id: 'LD-IM-' + Date.now() + Math.floor(Math.random() * 1000),
+          mobile: validMob,
+          name: finalName,
+          source: LEAD_SOURCES.INDIAMART,
+          tag: null,
+          status: 'New',
+          createdAt: new Date().toISOString(),
+          createdDate: new Date().toISOString().split('T')[0],
+          address: loc || "Not Available",
+          product: product,
+          raw: `${finalName} | ${loc} | ${product} | ${validMob}`,
+          notes: `Name: ${finalName}\nAddr: ${loc}\nProduct: ${product}`
+        };
+
+        firestore.createDocument("leads/" + newLead.id, newLead);
+        console.log(`✅ Saved Lead to Firebase: ${finalName} (${validMob}) | Source: ${newLead.source}`);
+
+        count++;
+        thread.markRead();
+      }
+    } catch (e) {
+      console.log("Email Error: " + e.message);
+    }
+  });
+  
+  console.log(`Finished. Processed ${count} unique leads directly to Firebase.`);
+}
+
+// ============================================================
+// 🗺️ 2. HUNT GOOGLE MAPS LEADS & PUSH TO FIREBASE
+// ============================================================
+function huntDailyLeadsToFirebase() {
+  console.log("Starting Daily Map Hunt for Firebase...");
+  const firestore = getFirestore();
+  const props = PropertiesService.getScriptProperties();
+
+  let areaIdx = Number(props.getProperty('LAST_AREA_IDX') || 0);
+  let keyIdx  = Number(props.getProperty('LAST_KEYWORD_IDX') || 0);
+
+  const area = TARGET_AREAS[areaIdx];
+  const keyword = TARGET_KEYWORDS[keyIdx];
+  const query = `${keyword} in ${area} ${TARGET_CITY}`;
+
+  const options = {
+    method: "post",
+    contentType: "application/json",
+    headers: {
+      "X-Goog-Api-Key": MAPS_KEY,
+      "X-Goog-FieldMask": "places.displayName,places.formattedAddress,places.rating,places.nationalPhoneNumber"
+    },
+    payload: JSON.stringify({ textQuery: query }),
+    muteHttpExceptions: true
+  };
+
+  try {
+    const json = JSON.parse(UrlFetchApp.fetch("https://places.googleapis.com/v1/places:searchText", options).getContentText());
+    if (json.error) return console.log("API Error: " + json.error.message);
+
+    let saved = 0;
+    for (let place of (json.places || [])) {
+      if (saved >= MAPS_DAILY_LIMIT) break;
+
+      const phone = place.nationalPhoneNumber;
+      if (!phone) continue;
+      const cleanPhone = phone.replace(/[^0-9]/g, '').slice(-10);
+      if (cleanPhone.length < 10) continue;
+
+      const name   = place.displayName ? place.displayName.text : "Unknown";
+      const addr   = place.formattedAddress || TARGET_CITY;
+      const rating = place.rating || null;
+
+      // --- FIREBASE PUSH WITH MATCHING FIELDS ---
+      const newLead = {
+        id: 'LD-GM-' + Date.now() + Math.floor(Math.random() * 1000),
+        mobile: cleanPhone,
+        name: name,
+        source: LEAD_SOURCES.MAPS,
+        tag: null,
+        status: 'New',
+        createdAt: new Date().toISOString(),
+        createdDate: new Date().toISOString().split('T')[0],
+        address: addr,
+        product: keyword,
+        rating: rating,
+        area: area,
+        raw: `${name} | ${addr} | ${cleanPhone}`,
+        notes: `Source: Google Maps\nArea: ${area}\nType: ${keyword}\nRating: ${rating || "N/A"}`
+      };
+
+      // Push to Firebase
+      firestore.createDocument("leads/" + newLead.id, newLead);
+      saved++;
+      console.log(`✅ Saved Lead to Firebase: ${name} (${cleanPhone}) | Source: ${newLead.source}`);
+    }
+
+    // Rotate targets
+    areaIdx++;
+    if (areaIdx >= TARGET_AREAS.length) { areaIdx = 0; keyIdx++; }
+    if (keyIdx >= TARGET_KEYWORDS.length) keyIdx = 0;
+    props.setProperty('LAST_AREA_IDX', areaIdx);
+    props.setProperty('LAST_KEYWORD_IDX', keyIdx);
+    
+    console.log(`Map Hunt Complete. Pushed ${saved} leads to Firebase.`);
+  } catch (e) {
+    console.log("Hunt Error: " + e.message);
+  }
+}
