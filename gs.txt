@@ -44,12 +44,42 @@ function getFirestore() {
   );
 }
 
+/**
+ * Creates a lead/contact record in Firestore.
+ * Used by background scrapers to save normalized lead contacts.
+ *
+ * @param {Object} leadData - Lead payload values.
+ * @returns {Object} created lead record.
+ */
+function createLeadContact(leadData) {
+  const firestore = getFirestore();
+  const now = new Date();
+  const payload = leadData || {};
+
+  const newLead = {
+    id: payload.id || ('LD-' + now.getTime() + Math.floor(Math.random() * 1000)),
+    mobile: payload.mobile || '',
+    name: payload.name || 'Unknown Lead',
+    source: payload.source || LEAD_SOURCES.MANUAL,
+    tag: payload.tag || null,
+    status: payload.status || 'New',
+    createdAt: payload.createdAt || now.toISOString(),
+    createdDate: payload.createdDate || now.toISOString().split('T')[0],
+    address: payload.address || 'Not Available',
+    product: payload.product || 'General Enquiry',
+    raw: payload.raw || '',
+    notes: payload.notes || ''
+  };
+
+  firestore.createDocument('leads/' + newLead.id, newLead);
+  return newLead;
+}
+
 // ============================================================
 // 📧 1. SCRAPE INDIAMART & PUSH TO FIREBASE (Original Logic)
 // ============================================================
 function processIndiaMartEmailsToFirebase() {
   console.log("Starting IndiaMART Email Processor...");
-  const firestore = getFirestore();
   
   const threads = GmailApp.search(GMAIL_SEARCH_QUERY);
   let count = 0;
@@ -102,8 +132,7 @@ function processIndiaMartEmailsToFirebase() {
         const product   = prodMatch ? prodMatch[1].trim() : "General Enquiry";
         const finalName = extractedName !== "Unknown" ? extractedName : "IndiaMART Lead";
 
-        // --- FIREBASE PUSH WITH MATCHING FIELDS ---
-        const newLead = {
+        const newLead = createLeadContact({
           id: 'LD-IM-' + Date.now() + Math.floor(Math.random() * 1000),
           mobile: validMob,
           name: finalName,
@@ -116,9 +145,8 @@ function processIndiaMartEmailsToFirebase() {
           product: product,
           raw: `${finalName} | ${loc} | ${product} | ${validMob}`,
           notes: `Name: ${finalName}\nAddr: ${loc}\nProduct: ${product}`
-        };
+        });
 
-        firestore.createDocument("leads/" + newLead.id, newLead);
         console.log(`✅ Saved Lead to Firebase: ${finalName} (${validMob}) | Source: ${newLead.source}`);
 
         count++;
@@ -137,7 +165,6 @@ function processIndiaMartEmailsToFirebase() {
 // ============================================================
 function huntDailyLeadsToFirebase() {
   console.log("Starting Daily Map Hunt for Firebase...");
-  const firestore = getFirestore();
   const props = PropertiesService.getScriptProperties();
 
   let areaIdx = Number(props.getProperty('LAST_AREA_IDX') || 0);
@@ -175,26 +202,22 @@ function huntDailyLeadsToFirebase() {
       const addr   = place.formattedAddress || TARGET_CITY;
       const rating = place.rating || null;
 
-      // --- FIREBASE PUSH WITH MATCHING FIELDS ---
-      const newLead = {
+      // Save hunted lead as contact-style entry with fixed Facebook name
+      const newLead = createLeadContact({
         id: 'LD-GM-' + Date.now() + Math.floor(Math.random() * 1000),
         mobile: cleanPhone,
-        name: name,
-        source: LEAD_SOURCES.MAPS,
+        name: 'Facebook Lead',
+        source: LEAD_SOURCES.FACEBOOK,
         tag: null,
         status: 'New',
         createdAt: new Date().toISOString(),
         createdDate: new Date().toISOString().split('T')[0],
         address: addr,
         product: keyword,
-        rating: rating,
-        area: area,
-        raw: `${name} | ${addr} | ${cleanPhone}`,
-        notes: `Source: Google Maps\nArea: ${area}\nType: ${keyword}\nRating: ${rating || "N/A"}`
-      };
+        raw: `Facebook Lead | ${addr} | ${cleanPhone}`,
+        notes: `Source: Google Maps\nOriginal Name: ${name}\nArea: ${area}\nType: ${keyword}\nRating: ${rating || "N/A"}`
+      });
 
-      // Push to Firebase
-      firestore.createDocument("leads/" + newLead.id, newLead);
       saved++;
       console.log(`✅ Saved Lead to Firebase: ${name} (${cleanPhone}) | Source: ${newLead.source}`);
     }
@@ -210,4 +233,40 @@ function huntDailyLeadsToFirebase() {
   } catch (e) {
     console.log("Hunt Error: " + e.message);
   }
+}
+
+// ============================================================
+// 👤 3. CREATE CONTACT FROM LEAD (FACEBOOK FIXED NAME)
+// ============================================================
+/**
+ * Adds a new lead as a contact-style record in Firestore.
+ * Name is always fixed to "Facebook Lead".
+ *
+ * @param {string} mobile - Lead mobile number.
+ * @param {Object} extraData - Optional extra fields (address, notes, product, etc.)
+ * @returns {Object} created lead/contact record or error payload.
+ */
+function addFacebookLeadContact(mobile, extraData) {
+  const cleanMobile = String(mobile || '').replace(/\D/g, '').slice(-10);
+  if (cleanMobile.length !== 10) {
+    return { error: 'Valid 10-digit mobile is required.' };
+  }
+
+  const payload = extraData || {};
+
+  const newLead = createLeadContact({
+    id: 'LD-FB-' + Date.now() + Math.floor(Math.random() * 1000),
+    mobile: cleanMobile,
+    name: 'Facebook Lead',
+    source: LEAD_SOURCES.FACEBOOK,
+    tag: payload.tag || null,
+    status: payload.status || 'New',
+    address: payload.address || 'Not Available',
+    product: payload.product || 'Facebook Enquiry',
+    raw: `Facebook Lead | ${cleanMobile}`,
+    notes: payload.notes || 'Added as Facebook Lead contact'
+  });
+
+  console.log(`✅ Saved Facebook Lead Contact: ${cleanMobile}`);
+  return newLead;
 }
